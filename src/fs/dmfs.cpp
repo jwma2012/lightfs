@@ -1,5 +1,5 @@
 #include "RPCServer.hpp"
-#include <sys/wait.h>  
+#include <sys/wait.h>
 #include <sys/types.h>
 
 RPCServer *server;
@@ -12,7 +12,7 @@ void Stop (int signo) {
 }
 int main() {
     signal(SIGINT, Stop);
-    server = new RPCServer(2);
+    server = new RPCServer(2); //RPCServer(_cqSize), _cqSize为2
     char *p = (char *)server->getMemoryManagerInstance()->getDataAddress();
     while (true) {
     	getchar();

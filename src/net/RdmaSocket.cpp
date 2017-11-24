@@ -1,6 +1,6 @@
 /***********************************************************************
-* 
-* 
+*
+*
 * Tsinghua Univ, 2016
 *
 ***********************************************************************/
@@ -8,8 +8,8 @@
 using namespace std;
 
 RdmaSocket::RdmaSocket(int _cqNum, uint64_t _mm, uint64_t _mmSize, Configuration* _conf, bool _isServer, uint8_t _Mode) :
-DeviceName(NULL), Port(1), ServerPort(5678), GidIndex(0), 
-isRunning(true), isServer(_isServer), cqNum(_cqNum), cqPtr(0), 
+DeviceName(NULL), Port(1), ServerPort(5678), GidIndex(0),
+isRunning(true), isServer(_isServer), cqNum(_cqNum), cqPtr(0),
 mm(_mm), mmSize(_mmSize), conf(_conf), MaxNodeID(1), Mode(_Mode) {
 	/* Use multiple cq to parallelly process new request. */
 	cq = (struct ibv_cq **)malloc(cqNum * sizeof(struct ibv_cq *));
@@ -141,7 +141,7 @@ bool RdmaSocket::CreateResources() {
     }
 
     mrFlags = IBV_ACCESS_LOCAL_WRITE | IBV_ACCESS_REMOTE_READ | IBV_ACCESS_REMOTE_WRITE | IBV_ACCESS_REMOTE_ATOMIC;
-   
+
     /* Test Registration Time Cost. */
     // struct  timeval start, end;
     // int size;
@@ -168,7 +168,7 @@ bool RdmaSocket::CreateResources() {
 
     /* register the memory buffer */
     Debug::notifyInfo("Register Memory Region");
-    
+
     mr = ibv_reg_mr(pd, (void*)mm, mmSize, mrFlags);
     if (mr == NULL) {
         Debug::notifyError("Memory registration failed");
@@ -237,7 +237,7 @@ bool RdmaSocket::CreateQueuePair(PeerSockData *peer, int offset) {
         cqPtr += 1;
         if (cqPtr >= cqNum) {
             cqPtr = 0;
-        } 
+        }
     }
 
     attr.cap.max_send_wr = QPS_MAX_DEPTH;
@@ -324,7 +324,7 @@ bool RdmaSocket::ModifyQPtoRTS(struct ibv_qp *qp) {
     int flags;
     int rc;
     memset(&attr, 0, sizeof(attr));
-    
+
     attr.qp_state = IBV_QPS_RTS;
     attr.sq_psn = 3185;
     flags = IBV_QP_STATE | IBV_QP_SQ_PSN;
@@ -530,7 +530,7 @@ bool RdmaSocket::ResourcesDestroy() {
             rc = false;
         }
     }
-        
+
     return rc;
 }
 
@@ -557,7 +557,7 @@ void RdmaSocket::RdmaListen() {
 	}
 
 	listen(sock,5);
-	
+
     Listener = thread(&RdmaSocket::RdmaAccept, this, sock);
     /* Connect to other servers. */
     ServerConnect();
@@ -699,12 +699,12 @@ bool RdmaSocket::RdmaSend(uint16_t NodeID, uint64_t SourceBuffer, uint64_t Buffe
     struct ibv_sge sg;
     struct ibv_send_wr wr;
     struct ibv_send_wr *wrBad;
-     
+
     memset(&sg, 0, sizeof(sg));
     sg.addr   = (uintptr_t)SourceBuffer;
     sg.length = BufferSize;
     sg.lkey   = mr->lkey;
-     
+
     memset(&wr, 0, sizeof(wr));
     wr.wr_id      = 0;
     wr.sg_list    = &sg;
@@ -757,12 +757,12 @@ bool RdmaSocket::RdmaReceive(uint16_t NodeID, uint64_t SourceBuffer, uint64_t Bu
     struct ibv_sge sg;
     struct ibv_recv_wr wr;
     struct ibv_recv_wr *wrBad;
-    int ret; 
+    int ret;
     memset(&sg, 0, sizeof(sg));
     sg.addr   = (uintptr_t)SourceBuffer;
     sg.length = BufferSize;
     sg.lkey   = mr->lkey;
-     
+
     memset(&wr, 0, sizeof(wr));
     wr.wr_id      = 0;
     wr.sg_list    = &sg;
@@ -801,12 +801,12 @@ bool RdmaSocket::RdmaRead(uint16_t NodeID, uint64_t SourceBuffer, uint64_t DesBu
     struct ibv_sge sg;
     struct ibv_send_wr wr;
     struct ibv_send_wr *wrBad;
-     
+
     memset(&sg, 0, sizeof(sg));
     sg.addr   = (uintptr_t)SourceBuffer;
     sg.length = BufferSize;
     sg.lkey   = mr->lkey;
-     
+
     memset(&wr, 0, sizeof(wr));
     wr.wr_id      = 0;
     wr.sg_list    = &sg;
@@ -815,7 +815,7 @@ bool RdmaSocket::RdmaRead(uint16_t NodeID, uint64_t SourceBuffer, uint64_t DesBu
     wr.send_flags = IBV_SEND_SIGNALED;
     wr.wr.rdma.remote_addr = DesBuffer + peers[NodeID]->RegisteredMemory;
     wr.wr.rdma.rkey        = peers[NodeID]->rkey;
-     
+
     if (ibv_post_send(peers[NodeID]->qp[TaskID], &wr, &wrBad)) {
         Debug::notifyError("Send with RDMA_READ failed.");
         return false;
@@ -897,17 +897,17 @@ bool RdmaSocket::DataTransferWorker(int id) {
 bool RdmaSocket::InboundHamal(int TaskID, uint64_t bufferSend, uint16_t NodeID, uint64_t bufferReceive, uint64_t size) {
     uint64_t SendPoolSize = 1024 * 1024;
     uint64_t SendPoolAddr = mm + 4 * 1024 + TaskID * 1024 * 1024;
-    uint64_t TotalSizeSend = 0; 
+    uint64_t TotalSizeSend = 0;
     uint64_t SendSize;
     struct ibv_wc wc;
     struct  timeval start, end;
     uint64_t diff;
     while (TotalSizeSend < size) {
         SendSize = (size - TotalSizeSend) >= SendPoolSize ? SendPoolSize : (size - TotalSizeSend);
-        // _RdmaBatchRead(NodeID, 
-        //                SendPoolAddr, 
-        //                bufferReceive + TotalSizeSend, 
-        //                SendSize, 
+        // _RdmaBatchRead(NodeID,
+        //                SendPoolAddr,
+        //                bufferReceive + TotalSizeSend,
+        //                SendSize,
         //                1);
         gettimeofday(&start, NULL);
         RdmaRead(NodeID, SendPoolAddr, bufferReceive + TotalSizeSend, SendSize, TaskID + 1);
@@ -933,7 +933,7 @@ bool RdmaSocket::RdmaWrite(uint16_t NodeID, uint64_t SourceBuffer, uint64_t DesB
     sg.addr   = (uintptr_t)SourceBuffer;
     sg.length = BufferSize;
     sg.lkey   = mr->lkey;
-     
+
     memset(&wr, 0, sizeof(wr));
     wr.wr_id      = 0;
     wr.sg_list    = &sg;
@@ -984,7 +984,7 @@ bool RdmaSocket::RemoteWrite(uint64_t bufferSend, uint16_t NodeID, uint64_t buff
 bool RdmaSocket::OutboundHamal(int TaskID, uint64_t bufferSend, uint16_t NodeID, uint64_t bufferReceive, uint64_t size) {
     uint64_t SendPoolSize = 1024 * 1024;
     uint64_t SendPoolAddr = mm + 4 * 1024 + TaskID * 1024 * 1024;
-    uint64_t TotalSizeSend = 0; 
+    uint64_t TotalSizeSend = 0;
     uint64_t SendSize;
     struct ibv_wc wc;
     struct  timeval start, end;
@@ -993,10 +993,10 @@ bool RdmaSocket::OutboundHamal(int TaskID, uint64_t bufferSend, uint16_t NodeID,
         SendSize = (size - TotalSizeSend) >= SendPoolSize ? SendPoolSize : (size - TotalSizeSend);
         gettimeofday(&start,NULL);
         memcpy((void *)SendPoolAddr, (void *)(bufferSend + TotalSizeSend), SendSize);
-        // _RdmaBatchWrite(NodeID, 
-        //                SendPoolAddr, 
-        //                bufferReceive + TotalSizeSend, 
-        //                SendSize, 
+        // _RdmaBatchWrite(NodeID,
+        //                SendPoolAddr,
+        //                bufferReceive + TotalSizeSend,
+        //                SendSize,
         //                (uint32_t)-1,
         //                1);
         RdmaWrite(NodeID, SendPoolAddr, bufferReceive + TotalSizeSend, SendSize, -1, TaskID + 1);
@@ -1055,10 +1055,10 @@ bool RdmaSocket::_RdmaBatchWrite(uint16_t NodeID, uint64_t SourceBuffer, uint64_
              send_wr[w_i].imm_data = imm;
          }
         send_wr[w_i].wr_id      = 0;
-        
+
         send_wr[w_i].send_flags = 0;
         send_wr[w_i].send_flags = (peer->counter & SIGNAL_BATCH) == 0 ? IBV_SEND_SIGNALED : 0;
-        
+
         //send_wr[w_i].send_flags |= IBV_SEND_INLINE;
         send_wr[w_i].wr.rdma.remote_addr = DesBuffer + peer->RegisteredMemory + w_i * 4096;
         Debug::debugItem("remote address = %lx, Counter = %d, imm = %lx", send_wr[w_i].wr.rdma.remote_addr, peer->counter, imm);
@@ -1084,7 +1084,7 @@ bool RdmaSocket::RdmaFetchAndAdd(uint16_t NodeID, uint64_t SourceBuffer, uint64_
     sg.addr   = (uintptr_t)SourceBuffer;
     sg.length = 8;
     sg.lkey   = mr->lkey;
-     
+
     memset(&wr, 0, sizeof(wr));
     wr.wr_id      = 0;
     wr.sg_list    = &sg;
@@ -1094,7 +1094,7 @@ bool RdmaSocket::RdmaFetchAndAdd(uint16_t NodeID, uint64_t SourceBuffer, uint64_
     wr.wr.atomic.remote_addr = DesBuffer + peer->RegisteredMemory;
     wr.wr.atomic.rkey        = peer->rkey;
     wr.wr.atomic.compare_add = Add; /* value to be added to the remote address content */
-     
+
     if (ibv_post_send(peer->qp[0], &wr, &wrBad)) {
         Debug::notifyError("Send with ATOMIC_FETCH_AND_ADD failed.");
         return false;
@@ -1112,7 +1112,7 @@ bool RdmaSocket::RdmaCompareAndSwap(uint16_t NodeID, uint64_t SourceBuffer, uint
     sg.addr   = (uintptr_t)SourceBuffer;
     sg.length = 8;
     sg.lkey   = mr->lkey;
-     
+
     memset(&wr, 0, sizeof(wr));
     wr.wr_id      = 0;
     wr.sg_list    = &sg;
@@ -1123,7 +1123,7 @@ bool RdmaSocket::RdmaCompareAndSwap(uint16_t NodeID, uint64_t SourceBuffer, uint
     wr.wr.atomic.rkey        = peer->rkey;
     wr.wr.atomic.compare_add = Compare; /* expected value in remote address */
     wr.wr.atomic.swap        = Swap; /* the value that remote address will be assigned to */
-     
+
     if (ibv_post_send(peer->qp[0], &wr, &wrBad)) {
         Debug::notifyError("Send with ATOMIC_CMP_AND_SWP failed.");
         return false;
@@ -1133,19 +1133,19 @@ bool RdmaSocket::RdmaCompareAndSwap(uint16_t NodeID, uint64_t SourceBuffer, uint
 
 int RdmaSocket::PollCompletion(uint16_t NodeID, int PollNumber, struct ibv_wc *wc) {
     int count = 0;
-     
+
     do {
         count += ibv_poll_cq(peers[NodeID]->cq, 1, wc);
     } while (count < PollNumber);
-     
+
     if (count < 0) {
         Debug::notifyError("Poll Completion failed.");
         return -1;
     }
-     
+
     /* Check Completion Status */
     if (wc->status != IBV_WC_SUCCESS) {
-        Debug::notifyError("Failed status %s (%d) for wr_id %d", 
+        Debug::notifyError("Failed status %s (%d) for wr_id %d",
             ibv_wc_status_str(wc->status),
             wc->status, (int)wc->wr_id);
         return -1;
@@ -1156,7 +1156,7 @@ int RdmaSocket::PollCompletion(uint16_t NodeID, int PollNumber, struct ibv_wc *w
 
 int RdmaSocket::PollWithCQ(int cqPtr, int PollNumber, struct ibv_wc *wc) {
     int count = 0;
-     
+
     do {
         count += ibv_poll_cq(cq[cqPtr], 1, wc);
     } while (count < PollNumber);
@@ -1165,10 +1165,10 @@ int RdmaSocket::PollWithCQ(int cqPtr, int PollNumber, struct ibv_wc *wc) {
         Debug::notifyError("Poll Completion failed.");
         return -1;
     }
-    
+
     /* Check Completion Status */
     if (wc->status != IBV_WC_SUCCESS) {
-        Debug::notifyError("Failed status %s (%d) for wr_id %d", 
+        Debug::notifyError("Failed status %s (%d) for wr_id %d",
             ibv_wc_status_str(wc->status),
             wc->status, (int)wc->wr_id);
         return -1;

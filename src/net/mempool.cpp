@@ -7,7 +7,7 @@ MemoryManager::MemoryManager(uint64_t _mm, uint64_t _ServerCount,  int _DataSize
         /* Open Shared Memory. */
         /* Add Data Storage. */
         DMFSTotalSize = (uint64_t)_DataSize;
-        DMFSTotalSize = DMFSTotalSize * 1024 * 1024 * 1024;
+        DMFSTotalSize = DMFSTotalSize * 1024 * 1024 * 1024;//大约2GB
         /* Add Metadata Storage. */
         DMFSTotalSize += METADATA_SIZE;
         /* Add Client Message Pool. */
@@ -67,7 +67,7 @@ uint64_t MemoryManager::getServerSendAddress(uint16_t NodeID, uint64_t *buffer) 
     // temp = temp % SERVER_MASSAGE_NUM;
     uint32_t tid = gettid();
     uint64_t offset = (uint64_t)th2id[tid];
-    *buffer = (ServerSendBaseAddress + 
+    *buffer = (ServerSendBaseAddress +
         (NodeID - 1) * SERVER_MASSAGE_SIZE * SERVER_MASSAGE_NUM
         + offset * SERVER_MASSAGE_SIZE);
     return offset;
@@ -75,7 +75,7 @@ uint64_t MemoryManager::getServerSendAddress(uint16_t NodeID, uint64_t *buffer) 
 
 uint64_t MemoryManager::getServerRecvAddress(uint16_t NodeID, uint16_t offset) {
     uint64_t buffer;
-    buffer = (ServerRecvBaseAddress + 
+    buffer = (ServerRecvBaseAddress +
         (NodeID - 1) * SERVER_MASSAGE_SIZE * SERVER_MASSAGE_NUM
         + offset * SERVER_MASSAGE_SIZE);
     return buffer;

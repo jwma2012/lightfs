@@ -12,10 +12,11 @@ void Debug::debugTitle(const char *str)
 {
     if (TITLE == true)                  /* If debug option is set. */
         printf("\033[0;45;1m%s\033[0m\n", str); /* Print debug title string. */
+        /* "\033[字背景颜色;字体颜色m字符串\033[0m" 用作输出颜色控制*/
 }
 
 /* Print debug item string. Can be used in a formatted style like a printf().
-   @param   format  Format of debug item. Same as printf(). 
+   @param   format  Format of debug item. Same as printf().
                     POTENTIALPROBLEM: the length of format can not exceed MAX_FORMAT_LEN - 1, but there is no check.
    @param   ...     Other argument variables to print. Same as printf(). */
 void Debug::debugItem(const char *format, ...)
@@ -49,7 +50,7 @@ void Debug::debugCur(const char *format, ...)
     va_end(args);                       /* End of variable arguments. */
 }
 /* Print necessary information at start period. Can be used in a formatted style like a printf().
-   @param   format  Format of debug item. Same as printf(). 
+   @param   format  Format of debug item. Same as printf().
                     POTENTIALPROBLEM: the length of format can not exceed MAX_FORMAT_LEN - 1, but there is no check.
    @param   ...     Other argument variables to print. Same as printf(). */
 void Debug::notifyInfo(const char *format, ...)
@@ -64,7 +65,7 @@ void Debug::notifyInfo(const char *format, ...)
 }
 
 /* Print error information at start period. Can be used in a formatted style like a printf().
-   @param   format  Format of debug item. Same as printf(). 
+   @param   format  Format of debug item. Same as printf().
                     POTENTIALPROBLEM: the length of format can not exceed MAX_FORMAT_LEN - 1, but there is no check.
    @param   ...     Other argument variables to print. Same as printf(). */
 void Debug::notifyError(const char *format, ...)

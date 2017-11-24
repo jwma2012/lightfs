@@ -1,6 +1,6 @@
 /***********************************************************************
-* 
-* 
+*
+*
 * Tsinghua Univ, 2016
 *
 ***********************************************************************/
@@ -12,10 +12,10 @@ using namespace std;
 
 Configuration::Configuration() {
 	ServerCount = 0;
-	read_xml("../conf.xml", pt);
+	read_xml("../conf.xml", pt); /* Boost库中读取xml的函数， boost::property_tree::ptree pt */
 	ptree child = pt.get_child("address");
-	for(BOOST_AUTO(pos,child.begin()); pos != child.end(); ++pos) 
-    {  
+	for(BOOST_AUTO(pos,child.begin()); pos != child.end(); ++pos)
+    {
         id2ip[(uint16_t)(pos->second.get<int>("id"))] = pos->second.get<string>("ip");
         ip2id[pos->second.get<string>("ip")] = pos->second.get<int>("id");
         ServerCount += 1;
