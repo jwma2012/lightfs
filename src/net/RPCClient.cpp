@@ -10,7 +10,7 @@ RPCClient::RPCClient(Configuration *_conf, RdmaSocket *_socket, MemoryManager *_
 RPCClient::RPCClient() {
 	isServer = false;
 	taskID = 1;
-	mm = (uint64_t)malloc(sizeof(char) * (1024 * 4 + 1024 * 1024 * 4));
+	mm = (uint64_t)malloc(sizeof(char) * (1024 * 4 + 1024 * 1024 * 4)); //44MB的空间
 	conf = new Configuration();
 	socket = new RdmaSocket(1, mm, (1024 * 4 + 1024 * 1024 * 4), conf, false, 0);
 	socket->RdmaConnect();
@@ -64,7 +64,7 @@ bool RPCClient::RdmaCall(uint16_t DesNodeID, char *bufferSend, uint64_t lengthSe
 	asm volatile ("sfence\n" : : );
 	temp = (uint32_t)offset;
 	imm = imm + (temp << 16);
-	Debug::debugItem("sendBuffer = %lx, receiveBuffer = %lx, remoteRecvBuffer = %lx, ReceiveSize = %d", 
+	Debug::debugItem("sendBuffer = %lx, receiveBuffer = %lx, remoteRecvBuffer = %lx, ReceiveSize = %d",
 		sendBuffer, receiveBuffer, remoteRecvBuffer, lengthReceive);
 	if (send->message == MESSAGE_DISCONNECT
 		|| send->message == MESSAGE_UPDATEMETA
@@ -102,7 +102,7 @@ uint64_t RPCClient::ContractSendBuffer(GeneralSendBuffer *send) {
 	uint64_t length = 0;
 	switch (send->message) {
 		case MESSAGE_MKNODWITHMETA: {
-			MakeNodeWithMetaSendBuffer *bufferSend = 
+			MakeNodeWithMetaSendBuffer *bufferSend =
 	                (MakeNodeWithMetaSendBuffer *)send;
         	    	length = (MAX_FILE_EXTENT_COUNT - bufferSend->metaFile.size) * sizeof(FileMetaTuple);
 			length = 0;

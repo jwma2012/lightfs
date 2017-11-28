@@ -217,7 +217,7 @@ int main(int argc, char* argv[])
     t1 = (tv.tv_sec * 1000 * 1000) + (tv.tv_usec);
 
     //test(0);
-   
+
     gettimeofday(&tv, NULL);
     t2 = (tv.tv_sec * 1000 * 1000) + (tv.tv_usec);
     printf("time cost: %d\n", (int)(t2 - t1));

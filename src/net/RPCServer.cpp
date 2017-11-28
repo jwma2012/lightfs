@@ -18,7 +18,7 @@ RPCServer::RPCServer(int _cqSize) :cqSize(_cqSize) {
               1024 * 20,/* Constructor of file system. */
               1024 * 30,
               2000,
-              conf->getServerCount(),    
+              conf->getServerCount(),
               socket->getNodeID());
 	fs->rootInitialize(socket->getNodeID());
 	wk = new thread[cqSize]();
@@ -113,7 +113,7 @@ void RPCServer::RequestPoller(int id) {
 			}
 			default: {
 				// if (id == 0 && UnlockWait == false && (send->message == MESSAGE_ADDMETATODIRECTORY || send->message == MESSAGE_REMOVEMETAFROMDIRECTORY)) {
-				// 	/* 
+				// 	/*
 				// 	* When process addmeta or remove meta, lock will be added without release,
 				// 	* So we will wait until update meta arrives.
 				// 	*/
@@ -141,7 +141,7 @@ void RPCServer::RequestPoller(int id) {
 				// printf("id = %d,end\n", id);
 			}
 		}
-		
+
 	}
 }
 
@@ -205,7 +205,7 @@ void RPCServer::ProcessRequest(GeneralSendBuffer *send, uint16_t NodeID, uint16_
 		} else if (NodeID > ServerCount) {
 			/* Recv Message From Client. */
 			bufferRecv = 0;
-		} 
+		}
 		Debug::debugItem("send = %lx, recv = %lx", send, bufferRecv);
     		socket->_RdmaBatchWrite(NodeID, (uint64_t)send, bufferRecv, size, 0, 1);
 		// socket->_RdmaBatchReceive(NodeID, mm, 0, 2);
@@ -222,47 +222,47 @@ uint64_t RPCServer::ContractReceiveBuffer(GeneralSendBuffer *send, GeneralReceiv
 	uint64_t length;
 	switch (send->message) {
 		case MESSAGE_GETATTR: {
-			GetAttributeReceiveBuffer *bufferRecv = 
+			GetAttributeReceiveBuffer *bufferRecv =
 			(GetAttributeReceiveBuffer *)recv;
 			if (bufferRecv->attribute.count >= 0 && bufferRecv->attribute.count < MAX_FILE_EXTENT_COUNT)
 				length = (MAX_FILE_EXTENT_COUNT - bufferRecv->attribute.count) * sizeof(FileMetaTuple);
-			else 
+			else
 				length = sizeof(FileMetaTuple) * MAX_FILE_EXTENT_COUNT;
 			break;
 		}
 		case MESSAGE_READDIR: {
-			ReadDirectoryReceiveBuffer *bufferRecv = 
+			ReadDirectoryReceiveBuffer *bufferRecv =
 			(ReadDirectoryReceiveBuffer *)recv;
 			if (bufferRecv->list.count >= 0 && bufferRecv->list.count <= MAX_DIRECTORY_COUNT)
 				length = (MAX_DIRECTORY_COUNT - bufferRecv->list.count) * sizeof(DirectoryMetaTuple);
-			else 
+			else
 				length = MAX_DIRECTORY_COUNT * sizeof(DirectoryMetaTuple);
 			break;
 		}
 		case MESSAGE_EXTENTREAD: {
-			ExtentReadReceiveBuffer *bufferRecv = 
+			ExtentReadReceiveBuffer *bufferRecv =
 			(ExtentReadReceiveBuffer *)recv;
 			if (bufferRecv->fpi.len >= 0 && bufferRecv->fpi.len <= MAX_MESSAGE_BLOCK_COUNT)
 				length = (MAX_MESSAGE_BLOCK_COUNT - bufferRecv->fpi.len) * sizeof(file_pos_tuple);
-			else 
+			else
 				length = MAX_MESSAGE_BLOCK_COUNT * sizeof(file_pos_tuple);
 			break;
 		}
 		case MESSAGE_EXTENTWRITE: {
-			ExtentWriteReceiveBuffer *bufferRecv = 
+			ExtentWriteReceiveBuffer *bufferRecv =
 			(ExtentWriteReceiveBuffer *)recv;
 			if (bufferRecv->fpi.len >= 0 && bufferRecv->fpi.len <= MAX_MESSAGE_BLOCK_COUNT)
 				length = (MAX_MESSAGE_BLOCK_COUNT - bufferRecv->fpi.len) * sizeof(file_pos_tuple);
-			else 
+			else
 				length = MAX_MESSAGE_BLOCK_COUNT * sizeof(file_pos_tuple);
 			break;
 		}
 		case MESSAGE_READDIRECTORYMETA: {
-			ReadDirectoryMetaReceiveBuffer *bufferRecv = 
+			ReadDirectoryMetaReceiveBuffer *bufferRecv =
 			(ReadDirectoryMetaReceiveBuffer *)recv;
 			if (bufferRecv->meta.count >= 0 && bufferRecv->meta.count <= MAX_DIRECTORY_COUNT)
 				length = (MAX_DIRECTORY_COUNT - bufferRecv->meta.count) * sizeof(DirectoryMetaTuple);
-			else 
+			else
 				length = MAX_DIRECTORY_COUNT * sizeof(DirectoryMetaTuple);
 			break;
 		}
@@ -270,7 +270,7 @@ uint64_t RPCServer::ContractReceiveBuffer(GeneralSendBuffer *send, GeneralReceiv
 			length = 0;
 			break;
 		}
-	}	
+	}
 	// printf("contract length = %d", (int)length);
 	return length;
 }

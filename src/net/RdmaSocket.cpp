@@ -24,7 +24,7 @@ mm(_mm), mmSize(_mmSize), conf(_conf), MaxNodeID(1), Mode(_Mode) {
 		struct hostent *hent;
 		gethostname(hname, sizeof(hname));
 		hent = gethostbyname(hname);
-		string ip(inet_ntoa(*(struct in_addr*)(hent->h_addr_list[0])));
+		string ip(inet_ntoa(*(struct in_addr*)(hent->h_addr_list[0]))); //获取本机ip
 		MyNodeID = conf->getIDbyIP(ip);
         Debug::notifyInfo("IP = %s, NodeID = %d", ip.c_str(), MyNodeID);
 	} else {
@@ -49,7 +49,13 @@ RdmaSocket::~RdmaSocket() {
     Debug::notifyInfo("Stop RdmaSocket.");
     if (isServer) {
         Debug::debugItem("1");
-        Listener.detach();
+        Listener.detach();  //Listener 接收客户端连接的线程
+        /**
+        void detach(); (since C++11)
+        Separates the thread of execution from the thread object, allowing execution to continue independently. Any allocated resources will be freed once the thread exits.
+After calling detach *this no longer owns any thread.
+将本线程从调用线程中分离出来，允许本线程独立执行。(但是当主进程结束的时候，即便是detach（）出去的子线程(由库接管）不管有没有完成都会被强制杀死)
+        */
     } else {
         for (int i = 0; i < WORKER_NUMBER; i++) {
             worker[i].detach();
@@ -124,6 +130,7 @@ bool RdmaSocket::CreateResources() {
     /* Create CQ for a certain number. */
  	for (i = 0; i < cqNum; i++) {
     	cq[i] = ibv_create_cq(ctx, QPS_MAX_DEPTH, NULL, NULL, 0);
+        //cq 支持的最大CQE数目为QPS_MAX_DEPTH = 128
 	    if (cq[i] == NULL) {
 	        Debug::notifyError("failed to create CQ");
             rc = 1;
@@ -373,13 +380,17 @@ bool RdmaSocket::ConnectQueuePair(PeerSockData *peer) {
     }
     if (isServer && RemoteID.isServer) {
         /* A server is connecting to me, we are both servers. */
+        //id已在配置文件指定
         peer->NodeID = RemoteID.NodeID;
     } else if (isServer && !RemoteID.isServer && MyNodeID != 1) {
         peer->NodeID = RemoteID.NodeID;
+        //从这里可以看出客户端先连接1号节点，再连接余下的服务器
     } else if (isServer && !RemoteID.isServer && MyNodeID == 1) {
+        //1号主节点，记录有新的客户端连接上，下次分配的节点id加1.
         peer->NodeID = MaxNodeID;
         MaxNodeID += 1;
     } else if (!isServer && RemoteID.GivenID != 0) {
+        //客户端只能使用服务器分配的id
         MyNodeID = RemoteID.GivenID;
     }
 
@@ -387,6 +398,7 @@ bool RdmaSocket::ConnectQueuePair(PeerSockData *peer) {
     CreateQueuePair(peer, 1);
     if (!isServer || (isServer && peer->NodeID > conf->getServerCount())) {
         /* Connection between server and client, create data channel. */
+        //是客户端或者是连接对象是客户端的服务器，即客户端和服务器之间是双QP连接
         DoubleQP = true;
         for (int i = 2; i < QP_NUMBER; i++)
         CreateQueuePair(peer, i);
@@ -406,7 +418,7 @@ bool RdmaSocket::ConnectQueuePair(PeerSockData *peer) {
     LocalMeta.qpNum[1] = peer->qp[1]->qp_num;
     if (DoubleQP) {
         for (int i = 2; i < QP_NUMBER; i++)
-        LocalMeta.qpNum[i] = peer->qp[i]->qp_num;
+            LocalMeta.qpNum[i] = peer->qp[i]->qp_num;
     }
 	LocalMeta.lid = PortAttribute.lid;
 	LocalMeta.RegisteredMemory = mm;
@@ -483,6 +495,7 @@ void RdmaSocket::SyncTool(uint16_t NodeID) {
         usleep(100000);
     char bufferSend, bufferReceive;
     DataSyncwithSocket(peers[NodeID]->sock, 1, &bufferSend, &bufferReceive);
+    //交换一个字符，表示连接正常。
 }
 
 bool RdmaSocket::ResourcesDestroy() {
@@ -583,6 +596,7 @@ void RdmaSocket::RdmaAccept(int sock) {
             /* Rdma Receive in Advance. */
             for (int i = 0; i < QPS_MAX_DEPTH; i++) {
                 RdmaReceive(peer->NodeID, mm + peer->NodeID * 4096, 0);
+                // mm + peer->NodeID * 4096指向一个确定的内存区，该区域记录连接信息
             }
 
             Debug::debugItem("Accepted to Node%d", peer->NodeID);
@@ -732,7 +746,7 @@ bool RdmaSocket::_RdmaBatchSend(uint16_t NodeID, uint64_t SourceBuffer, uint64_t
         if ((peer->counter & SIGNAL_BATCH) == 0 && peer->counter > 0 && !isServer) {
             PollCompletion(NodeID, 1, &wc);
         }
-        sgl[w_i].addr   = (uintptr_t)SourceBuffer + w_i * 4096;
+        sgl[w_i].addr   = (uintptr_t)SourceBuffer + w_i * 4096;//4096
         sgl[w_i].length = BufferSize;
         sgl[w_i].lkey   = mr->lkey;
         send_wr[w_i].sg_list    = &sgl[w_i];
@@ -745,7 +759,7 @@ bool RdmaSocket::_RdmaBatchSend(uint16_t NodeID, uint64_t SourceBuffer, uint64_t
         //send_wr[w_i].send_flags |= IBV_SEND_INLINE;
         peer->counter += 1;
     }
-    if (ibv_post_send(peer->qp[0], &send_wr[0], &wrBad)) {
+    if (ibv_post_send(peer->qp[0], &send_wr[0], &wrBad)) {//这个batch send有作用吗？只发送了一个啊
         Debug::notifyError("Send with RDMA_SEND failed.");
         return false;
     }
@@ -868,6 +882,7 @@ bool RdmaSocket::RemoteRead(uint64_t bufferSend, uint16_t NodeID, uint64_t buffe
         TransferSignal = 0;
         shipSize = size / WORKER_NUMBER;
         shipSize = shipSize >> 12 << 12;
+        //先右移，再左移，去负数？
         for (int i = 0; i < WORKER_NUMBER; i++) {
             tasks[i].OpType = false;
             tasks[i].size = (i < 3) ? shipSize : (size - 3 * shipSize);
@@ -911,6 +926,7 @@ bool RdmaSocket::InboundHamal(int TaskID, uint64_t bufferSend, uint16_t NodeID, 
         //                1);
         gettimeofday(&start, NULL);
         RdmaRead(NodeID, SendPoolAddr, bufferReceive + TotalSizeSend, SendSize, TaskID + 1);
+        //发送了sendsize
         PollCompletion(NodeID, 1, &wc);
         memcpy((void *)(bufferSend + TotalSizeSend), (void *)SendPoolAddr, SendSize);
         gettimeofday(&end, NULL);
@@ -959,7 +975,7 @@ bool RdmaSocket::RdmaWrite(uint16_t NodeID, uint64_t SourceBuffer, uint64_t DesB
 bool RdmaSocket::RemoteWrite(uint64_t bufferSend, uint16_t NodeID, uint64_t bufferReceive, uint64_t size) {
     int shipSize;
     TransferTask tasks[4];
-    if (size < 4 * 1024 * 1024) {
+    if (size < 4 * 1024 * 1024) { //小于4M
         /* Small size write, no need to use multithread to transfer. */
         OutboundHamal(0, bufferSend, NodeID, bufferReceive, size);
         return true;

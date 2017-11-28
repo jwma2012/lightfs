@@ -55,7 +55,7 @@ void correct(const char *old_path, char *new_path)
 	}
 }
 
-/* Get parent directory. 
+/* Get parent directory.
    Examples:    "/parent/file" -> "/parent" return true
                 "/file"        -> "/" return true
                 "/"            -> return false
@@ -77,7 +77,7 @@ bool getParentDirectory(const char *path, char *parent) { /* Assume path is vali
                     parent[i] = '\0';   /* Cut string. */
                     resultCut = true;
                     break;
-                } 
+                }
             }
             if (resultCut == false) {
                 return false;           /* There is no '/' in string. It is an extra check. */
@@ -85,7 +85,7 @@ bool getParentDirectory(const char *path, char *parent) { /* Assume path is vali
                 if (parent[0] == '\0') { /* If format is '/path' which contains only one '/' then parent is '/'. */
                     parent[0] = '/';
                     parent[1] = '\0';
-                    return true;        /* Succeed. Parent is root directory. */ 
+                    return true;        /* Succeed. Parent is root directory. */
                 } else {
                     return true;        /* Succeed. */
                 }
@@ -94,7 +94,7 @@ bool getParentDirectory(const char *path, char *parent) { /* Assume path is vali
     }
 }
 
-/* Get file name from path. 
+/* Get file name from path.
    Examples:    '/parent/file' -> 'file' return true
                 '/file'        -> 'file' return true
                 '/'            -> return false
@@ -167,9 +167,9 @@ int nrfsDisconnect(nrfs fs)
 	}
 	isConnected.store(false);
 	// client->getRdmaSocketInstance()->NotifyPerformance();
-	// Debug::notifyInfo("WriteTime1 =  %d, WriteTime2  = %d, WriteTime3 = %d WriteTime4 = %d", 
+	// Debug::notifyInfo("WriteTime1 =  %d, WriteTime2  = %d, WriteTime3 = %d WriteTime4 = %d",
 	// 	WriteTime1, WriteTime2, WriteTime3, WriteTime4);
-	// Debug::notifyInfo("ReadTime1 =  %d, ReadTime2  = %d, ReadTime3 = %d, ReadTime4 = %d\n", 
+	// Debug::notifyInfo("ReadTime1 =  %d, ReadTime2  = %d, ReadTime3 = %d, ReadTime4 = %d\n",
 	// 	ReadTime1, ReadTime2, ReadTime3, ReadTime4);
 	return 0;
 }
@@ -185,13 +185,13 @@ int nrfsAddMetaToDirectory(nrfs fs, char* parent, char* name, bool isDirectory)
     bufferAddMetaToDirectorySend.isDirectory = isDirectory; /* Assign state of directory. */
 
     uint16_t hashNode = get_node_id_by_path(parent);
-    
+
     UpdataDirectoryMetaReceiveBuffer bufferGeneralReceive; /* Receive buffer. */
-    
+
     if (sendMessage(hashNode,
-                    &bufferAddMetaToDirectorySend, 
-                    sizeof(AddMetaToDirectorySendBuffer), 
-                    &bufferGeneralReceive, 
+                    &bufferAddMetaToDirectorySend,
+                    sizeof(AddMetaToDirectorySendBuffer),
+                    &bufferGeneralReceive,
                     sizeof(UpdataDirectoryMetaReceiveBuffer)) == false) {
         result = 1;               /* Fail due to send message error. */
     } else {
@@ -209,15 +209,15 @@ int nrfsAddMetaToDirectory(nrfs fs, char* parent, char* name, bool isDirectory)
             bufferSend.offset = bufferGeneralReceive.offset;
             GeneralReceiveBuffer bufferReceive;
             if (sendMessage(hashNode,
-                    &bufferSend, 
-                    sizeof(DoRemoteCommitSendBuffer), 
-                    &bufferReceive, 
+                    &bufferSend,
+                    sizeof(DoRemoteCommitSendBuffer),
+                    &bufferReceive,
                     sizeof(GeneralReceiveBuffer)) == false) {
             	Debug::notifyError("Do commit failed.");
 		        result = 1;               /* Fail due to send message error. */
 		    } else {
 		    	Debug::debugItem("Do commit success.");
-            	if (bufferReceive.result) {            /* Succeed due to remote function returns true. */ 
+            	if (bufferReceive.result) {            /* Succeed due to remote function returns true. */
 		    		return 0;
 		    	} else {
 		    		return 1;
@@ -240,10 +240,10 @@ int nrfsRemoveMetaFromDirectory(nrfs fs, char* path, char* name)
     uint16_t hashNode = get_node_id_by_path(path);
 
     UpdataDirectoryMetaReceiveBuffer bufferGeneralReceive; /* Receive buffer. */
-    if (sendMessage(hashNode, 
-                    &bufferRemoveMetaFromDirectorySend, 
-                    sizeof(RemoveMetaFromDirectorySendBuffer), 
-                    &bufferGeneralReceive, 
+    if (sendMessage(hashNode,
+                    &bufferRemoveMetaFromDirectorySend,
+                    sizeof(RemoveMetaFromDirectorySendBuffer),
+                    &bufferGeneralReceive,
                     sizeof(UpdataDirectoryMetaReceiveBuffer)) == false) {
         result = 1;               /* Fail due to send message error. */
     } else {
@@ -251,7 +251,7 @@ int nrfsRemoveMetaFromDirectory(nrfs fs, char* path, char* name)
         	Debug::debugItem("result == false");
             result = 1;            /* Fail due to remote function returns false. */
         } else {
-            result = 0;            /* Succeed due to remote function returns true. */ 
+            result = 0;            /* Succeed due to remote function returns true. */
         }
     }
     return result;
@@ -285,10 +285,10 @@ int nrfsMknodWithMeta(nrfs fs, char *path, FileMeta *metaFile)
 				uint16_t hashNode = get_node_id_by_path(path);
 
 	            GeneralReceiveBuffer bufferGeneralReceive; /* Receive buffer. */
-	            if (sendMessage(hashNode, 
-	                            &bufferMakeNodeWithMetaSend, 
-	                            sizeof(MakeNodeWithMetaSendBuffer), 
-	                            &bufferGeneralReceive, 
+	            if (sendMessage(hashNode,
+	                            &bufferMakeNodeWithMetaSend,
+	                            sizeof(MakeNodeWithMetaSendBuffer),
+	                            &bufferGeneralReceive,
 	                            sizeof(GeneralReceiveBuffer)) == false) {
 	                result = 1;           /* Fail due to send message error. */
 	            } else {
@@ -302,7 +302,7 @@ int nrfsMknodWithMeta(nrfs fs, char *path, FileMeta *metaFile)
 	                		result = 1;
 	                	}
 	                	else
-	                    	result = 0;        /* Succeed due to remote function returns true. */ 
+	                    	result = 0;        /* Succeed due to remote function returns true. */
 	                }
 	            }
 			}
@@ -342,10 +342,10 @@ nrfsFile nrfsOpenFile(nrfs fs, const char* _path, int flags)
 
 
 /**
-*nrfsMknod - create a file. 
+*nrfsMknod - create a file.
 * @param fs The configured filesystem handle.
 * @param path The full path to the file.
-* @return Returns 0 on success, -1 on error.  
+* @return Returns 0 on success, -1 on error.
 **/
 int nrfsMknod(nrfs fs, const char* _path)
 {
@@ -358,7 +358,7 @@ int nrfsMknod(nrfs fs, const char* _path)
 
 	correct(_path, sendBuffer.path);
 	uint16_t node_id  = get_node_id_by_path(sendBuffer.path);
-	sendMessage(node_id, &sendBuffer, sizeof(GeneralSendBuffer), 
+	sendMessage(node_id, &sendBuffer, sizeof(GeneralSendBuffer),
 		&receiveBuffer, sizeof(GeneralReceiveBuffer));
 	if(receiveBuffer.result == false) {
 		result = 1;
@@ -369,10 +369,10 @@ int nrfsMknod(nrfs fs, const char* _path)
 }
 
 /**
-*nrfsCloseFile - Close an open file. 
+*nrfsCloseFile - Close an open file.
 * @param fs The configured filesystem handle.
 * @param path The full path to the file.
-* @return Returns 0 on success, -1 on error.  
+* @return Returns 0 on success, -1 on error.
 **/
 int nrfsCloseFile(nrfs fs, nrfsFile file)
 {
@@ -384,7 +384,7 @@ int nrfsCloseFile(nrfs fs, nrfsFile file)
 }
 
 /**
-*nrfsGetAttribute - Get the attribute of the file. 
+*nrfsGetAttribute - Get the attribute of the file.
 * @param fs The configured filesystem handle.
 * @param file The full path to the file.
 * @return Returns 0 on success, -1 on error.
@@ -401,10 +401,10 @@ int nrfsGetAttribute(nrfs fs, nrfsFile _file, FileMeta *attr)
     uint16_t node_id = get_node_id_by_path(bufferGeneralSend.path);
 
     GetAttributeReceiveBuffer bufferGetAttributeReceive;
-    
-    sendMessage(node_id, &bufferGeneralSend, sizeof(GeneralSendBuffer), 
+
+    sendMessage(node_id, &bufferGeneralSend, sizeof(GeneralSendBuffer),
 					&bufferGetAttributeReceive, sizeof(GetAttributeReceiveBuffer));
-	
+
 	*attr = bufferGetAttributeReceive.attribute;
 	Debug::debugItem("nrfsGetAttribute, META.size = %d", attr->size);
 	if(bufferGetAttributeReceive.result)
@@ -414,10 +414,10 @@ int nrfsGetAttribute(nrfs fs, nrfsFile _file, FileMeta *attr)
 }
 
 /**
-*nrfsAccess - access an file. 
+*nrfsAccess - access an file.
 * @param fs The configured filesystem handle.
 * @param path The full path to the file.
-* @return Returns 0 on success, -1 on error.  
+* @return Returns 0 on success, -1 on error.
 **/
 int nrfsAccess(nrfs fs, const char* _path)
 {
@@ -425,13 +425,13 @@ int nrfsAccess(nrfs fs, const char* _path)
 	Debug::debugItem("nrfsAccess: %s", _path);
 	GeneralSendBuffer sendBuffer;
 	GeneralReceiveBuffer receiveBuffer;
-	
+
 	sendBuffer.message = MESSAGE_ACCESS;
 
 	correct(_path, sendBuffer.path);
 	uint16_t node_id = get_node_id_by_path(sendBuffer.path);
-	
-	sendMessage(node_id, &sendBuffer, sizeof(GeneralSendBuffer), 
+
+	sendMessage(node_id, &sendBuffer, sizeof(GeneralSendBuffer),
 					&receiveBuffer, sizeof(GeneralReceiveBuffer));
 	if(receiveBuffer.result)
 		return 0;
@@ -444,15 +444,15 @@ int nrfsAccess(nrfs fs, const char* _path)
 * @param fs The configured filesystem handle.
 * @param file The file handle.
 * @param buffer The data.
-* @param size The no. of bytes to write. 
-* @param offset The offset of the file where to write. 
-* @return Returns the number of bytes written, -1 on error. 
+* @param size The no. of bytes to write.
+* @param offset The offset of the file where to write.
+* @return Returns the number of bytes written, -1 on error.
 **/
 int nrfsWrite(nrfs fs, nrfsFile _file, const void* buffer, uint64_t size, uint64_t offset)
 {
 	Debug::debugTitle("nrfsWrite");
 	Debug::debugItem("Write size: %lx, offset: %lx", size, offset);
-	
+
 	gettimeofday(&start1, NULL);
 
 	file_pos_info fpi;
@@ -461,19 +461,19 @@ int nrfsWrite(nrfs fs, nrfsFile _file, const void* buffer, uint64_t size, uint64
     ExtentWriteReceiveBuffer bufferExtentWriteReceive;
 
     bufferExtentWriteSend.message = MESSAGE_EXTENTWRITE; /* Assign message type. */
-    
+
     correct((char*)_file, bufferExtentWriteSend.path);
 	uint16_t node_id = get_node_id_by_path(bufferExtentWriteSend.path);
-    
+
     bufferExtentWriteSend.size = size; /* Assign size. */
     bufferExtentWriteSend.offset = offset; /* Assign offset. */
-	
+
 	gettimeofday(&end1, NULL);
 	diff = 1000000 * (end1.tv_sec - start1.tv_sec) + end1.tv_usec - start1.tv_usec;
 	WriteTime1 += diff;
 
 	gettimeofday(&start1, NULL);
-	sendMessage(node_id, &bufferExtentWriteSend, sizeof(ExtentWriteSendBuffer), 
+	sendMessage(node_id, &bufferExtentWriteSend, sizeof(ExtentWriteSendBuffer),
 					&bufferExtentWriteReceive, sizeof(ExtentWriteReceiveBuffer));
 	gettimeofday(&end1, NULL);
 	diff = 1000000 * (end1.tv_sec - start1.tv_sec) + end1.tv_usec - start1.tv_usec;
@@ -484,17 +484,17 @@ int nrfsWrite(nrfs fs, nrfsFile _file, const void* buffer, uint64_t size, uint64
 		gettimeofday(&start1, NULL);
 		for(int i = 0; i < (int)fpi.len; i++)
 		{
-			Debug::debugItem("fpi: i = %d, node_id = %d,offset = %x, size = %d", 
+			Debug::debugItem("fpi: i = %d, node_id = %d,offset = %x, size = %d",
 				i, fpi.tuple[i].node_id, fpi.tuple[i].offset, fpi.tuple[i].size);
 			if(/*fpi.node_id[i] == (uint16_t)fs*/0)
 			{
 				// memcpy((void*)(mem.get_storage_addr() + fpi.offset[i]),
-				// 	   (void*)((char*)buffer + length_copied), 
+				// 	   (void*)((char*)buffer + length_copied),
 				// 	   fpi.size[i]);
 			}
 			else
 			{
-				client->getRdmaSocketInstance()->RemoteWrite((uint64_t)((char*)buffer + length_copied), 
+				client->getRdmaSocketInstance()->RemoteWrite((uint64_t)((char*)buffer + length_copied),
 					              fpi.tuple[i].node_id,
                                   fpi.tuple[i].offset + DmfsDataOffset,
                                   fpi.tuple[i].size);
@@ -512,7 +512,7 @@ int nrfsWrite(nrfs fs, nrfsFile _file, const void* buffer, uint64_t size, uint64
 		bufferUpdateMetaSend.offset = bufferExtentWriteReceive.offset;
         GeneralReceiveBuffer bufferGeneralReceive; /* Receive buffer. */
 
-		sendMessage(node_id, &bufferUpdateMetaSend, sizeof(UpdateMetaSendBuffer), 
+		sendMessage(node_id, &bufferUpdateMetaSend, sizeof(UpdateMetaSendBuffer),
 					&bufferGeneralReceive, sizeof(GeneralReceiveBuffer));
 		gettimeofday(&end1, NULL);
 		diff = 1000000 * (end1.tv_sec - start1.tv_sec) + end1.tv_usec - start1.tv_usec;
@@ -532,9 +532,9 @@ int nrfsWrite(nrfs fs, nrfsFile _file, const void* buffer, uint64_t size, uint64
 * @param fs The configured filesystem handle.
 * @param file The file handle.
 * @param buffer The buffer to copy read bytes into.
-* @param size The no. of bytes to read. 
-* @param offset The offset of the file where to read. 
-* @return Returns the number of bytes actually read, -1 on error. 
+* @param size The no. of bytes to read.
+* @param offset The offset of the file where to read.
+* @return Returns the number of bytes actually read, -1 on error.
 **/
 int nrfsRead(nrfs fs, nrfsFile _file, void* buffer, uint64_t size, uint64_t offset)
 {
@@ -548,10 +548,10 @@ int nrfsRead(nrfs fs, nrfsFile _file, void* buffer, uint64_t size, uint64_t offs
     ExtentReadReceiveBuffer bufferExtentReadReceive;
 
     bufferExtentReadSend.message = MESSAGE_EXTENTREAD;
-    
+
     correct((char*)_file, bufferExtentReadSend.path);
 	uint16_t node_id = get_node_id_by_path(bufferExtentReadSend.path);
-    
+
     bufferExtentReadSend.size = size; /* Assign size. */
     bufferExtentReadSend.offset = offset; /* Assign offset. */
 
@@ -559,7 +559,7 @@ int nrfsRead(nrfs fs, nrfsFile _file, void* buffer, uint64_t size, uint64_t offs
 	diff = 1000000 * (end1.tv_sec - start1.tv_sec) + end1.tv_usec - start1.tv_usec;
 	ReadTime1 += diff;
 	gettimeofday(&start1, NULL);
-	sendMessage(node_id, &bufferExtentReadSend, sizeof(ExtentReadSendBuffer), 
+	sendMessage(node_id, &bufferExtentReadSend, sizeof(ExtentReadSendBuffer),
 					&bufferExtentReadReceive, sizeof(ExtentReadReceiveBuffer));
 	gettimeofday(&end1, NULL);
 	diff = 1000000 * (end1.tv_sec - start1.tv_sec) + end1.tv_usec - start1.tv_usec;
@@ -569,19 +569,19 @@ int nrfsRead(nrfs fs, nrfsFile _file, void* buffer, uint64_t size, uint64_t offs
 		gettimeofday(&start1, NULL);
 		for(int i = 0; i < (int)fpi.len; i++)
 		{
-			Debug::debugItem("fpi: i = %d, node_id = %d,offset = %x, size = %d", 
+			Debug::debugItem("fpi: i = %d, node_id = %d,offset = %x, size = %d",
 				i, fpi.tuple[i].node_id, fpi.tuple[i].offset, fpi.tuple[i].size);
 			if(/*fpi.node_id[i] == (uint16_t)fs*/0)
 			{
-				// memcpy((void*)((char*)buffer + length_copied), 
+				// memcpy((void*)((char*)buffer + length_copied),
 				// 	   (void*)(mem.get_storage_addr() + fpi.offset[i]),
 				// 	   fpi.size[i]);
 			}
 			else
 			{
-				client->getRdmaSocketInstance()->RemoteRead((uint64_t)((char*)buffer + length_copied), 
+				client->getRdmaSocketInstance()->RemoteRead((uint64_t)((char*)buffer + length_copied),
 					              fpi.tuple[i].node_id,
-                                  fpi.tuple[i].offset + DmfsDataOffset, 
+                                  fpi.tuple[i].offset + DmfsDataOffset,
                                   fpi.tuple[i].size);
 			}
 			length_copied += fpi.tuple[i].size;
@@ -597,7 +597,7 @@ int nrfsRead(nrfs fs, nrfsFile _file, void* buffer, uint64_t size, uint64_t offs
 		bufferExtentReadEndSend.offset = bufferExtentReadReceive.offset;
         GeneralReceiveBuffer bufferGeneralReceive; /* Receive buffer. */
 
-		sendMessage(node_id, &bufferExtentReadEndSend, sizeof(ExtentReadEndSendBuffer), 
+		sendMessage(node_id, &bufferExtentReadEndSend, sizeof(ExtentReadEndSendBuffer),
 					&bufferGeneralReceive, sizeof(GeneralReceiveBuffer));
 		gettimeofday(&end1, NULL);
 		diff = 1000000 * (end1.tv_sec - start1.tv_sec) + end1.tv_usec - start1.tv_usec;
@@ -608,12 +608,12 @@ int nrfsRead(nrfs fs, nrfsFile _file, void* buffer, uint64_t size, uint64_t offs
 	}
 }
 
-/** 
+/**
 * nrfsCreateDirectory - Make the given file and all non-existent
 * parents into directories.
 * @param fs The configured filesystem handle.
 * @param path The path of the directory.
-* @return Returns 0 on success, -1 on error. 
+* @return Returns 0 on success, -1 on error.
 */
 #define RECURSIVE_CREATE 1
 #ifdef RECURSIVE_CREATE
@@ -644,10 +644,10 @@ int nrfsCreateDirectory(nrfs fs, const char* _path)
 			continue; /* The directory already exist. */
 		}
 		bufferGeneralSend.message = MESSAGE_MKDIR; /* Assign message type. */
-		
+
 		GeneralReceiveBuffer bufferGeneralReceive; /* Receive buffer. */
 		uint16_t node_id = get_node_id_by_path(bufferGeneralSend.path);
-		sendMessage(node_id, &bufferGeneralSend, sizeof(GeneralSendBuffer), 
+		sendMessage(node_id, &bufferGeneralSend, sizeof(GeneralSendBuffer),
 			&bufferGeneralReceive, sizeof(GeneralReceiveBuffer));
 		if(bufferGeneralReceive.result == false) {
 			return 1;
@@ -669,7 +669,7 @@ int nrfsCreateDirectory(nrfs fs, const char* _path)
 
 	correct(_path, bufferGeneralSend.path);
 	uint16_t node_id = get_node_id_by_path(bufferGeneralSend.path);
-	sendMessage(node_id, &bufferGeneralSend, sizeof(GeneralSendBuffer), 
+	sendMessage(node_id, &bufferGeneralSend, sizeof(GeneralSendBuffer),
 		&bufferGeneralReceive, sizeof(GeneralReceiveBuffer));
 	if(bufferGeneralReceive.result == false)
 		result = 1;
@@ -680,11 +680,11 @@ int nrfsCreateDirectory(nrfs fs, const char* _path)
 	return result;
 }
 #endif
-/** 
+/**
 * nrfsDelete - Delete file or directory.
 * @param fs The configured filesystem handle.
 * @param path The path of the directory.
-* @return Returns 0 on success, -1 on error. 
+* @return Returns 0 on success, -1 on error.
 */
 int nrfsDelete(nrfs fs, const char* _path)
 {
@@ -699,7 +699,7 @@ int nrfsDelete(nrfs fs, const char* _path)
 	correct(_path, bufferGeneralSend.path);
 	uint16_t node_id = get_node_id_by_path(bufferGeneralSend.path);
 
-	sendMessage(node_id, &bufferGeneralSend, sizeof(GeneralSendBuffer), 
+	sendMessage(node_id, &bufferGeneralSend, sizeof(GeneralSendBuffer),
 					&bufferReceive, sizeof(GetAttributeReceiveBuffer));
 	if (bufferReceive.result == false) {
 		Debug::notifyError("Remove file failed.");
@@ -708,7 +708,7 @@ int nrfsDelete(nrfs fs, const char* _path)
 		for (uint64_t i = 0; i < bufferReceive.attribute.count; i++) {
 			if (((uint16_t)(bufferReceive.attribute.tuple[i].hashNode) != node_id) && (bufferReceive.attribute.tuple[i].hashNode != 0)) {
 				nrfsFreeBlock((uint16_t)(bufferReceive.attribute.tuple[i].hashNode),
-						bufferReceive.attribute.tuple[i].indexExtentStartBlock, 
+						bufferReceive.attribute.tuple[i].indexExtentStartBlock,
 						bufferReceive.attribute.tuple[i].countExtentBlock);
 			}
 		}
@@ -723,7 +723,7 @@ int nrfsFreeBlock(uint16_t nodeHash, uint64_t startBlock, uint64_t countBlock)
 	bufferSend.message = MESSAGE_FREEBLOCK;
 	bufferSend.startBlock = startBlock;
 	bufferSend.countBlock = countBlock;
-	sendMessage(nodeHash, &bufferSend, sizeof(BlockFreeSendBuffer), 
+	sendMessage(nodeHash, &bufferSend, sizeof(BlockFreeSendBuffer),
 					&bufferReceive, sizeof(GeneralReceiveBuffer));
 	if(bufferReceive.result == false) {
 		return 1;
@@ -767,11 +767,11 @@ int renameDirectory(nrfs fs, const char *oldPath, const char *newPath)
 	return 0;
 }
 /**
-* nrfsRename - Rename file. 
+* nrfsRename - Rename file.
 * @param fs The configured filesystem handle.
-* @param oldPath The path of the source file. 
-* @param newPath The path of the destination file. 
-* @return Returns 0 on success, -1 on error. 
+* @param oldPath The path of the source file.
+* @param newPath The path of the destination file.
+* @return Returns 0 on success, -1 on error.
 */
 int nrfsRename(nrfs fs, const char* _oldpath, const char* _newpath)
 {
@@ -807,7 +807,7 @@ int nrfsRename(nrfs fs, const char* _oldpath, const char* _newpath)
 		{
 			uint16_t node_id = get_node_id_by_path(bufferRenameSend.pathOld);
 
-			sendMessage(node_id, &bufferRenameSend, sizeof(RenameSendBuffer), 
+			sendMessage(node_id, &bufferRenameSend, sizeof(RenameSendBuffer),
 							&bufferGeneralReceive, sizeof(GeneralReceiveBuffer));
 			if(bufferGeneralReceive.result == false)
 			{
@@ -822,7 +822,7 @@ int nrfsRename(nrfs fs, const char* _oldpath, const char* _newpath)
 	return result;
 }
 
-/** 
+/**
 * nrfsListDirectory - Get list of files/directories for a given
 * directory-path.
 * @param fs The configured filesystem handle.
@@ -838,10 +838,10 @@ int nrfsListDirectory(nrfs fs, const char* _path, nrfsfilelist *list)
     ReadDirectoryReceiveBuffer bufferReadDirectoryReceive; /* Receive buffer. */
 
 	correct(_path, bufferGeneralSend.path);
-	
+
 	uint16_t node_id = get_node_id_by_path(bufferGeneralSend.path);
 
-	sendMessage(node_id, &bufferGeneralSend, sizeof(GeneralSendBuffer), 
+	sendMessage(node_id, &bufferGeneralSend, sizeof(GeneralSendBuffer),
 					&bufferReadDirectoryReceive, sizeof(ReadDirectoryReceiveBuffer));
 	*list = bufferReadDirectoryReceive.list;
 	if(bufferReadDirectoryReceive.result)
@@ -860,13 +860,13 @@ int nrfsTest(nrfs fs, const int offset)
 	char _path[] = "/sdafsf";
 	GeneralSendBuffer sendBuffer;
 	GeneralReceiveBuffer receiveBuffer;
-	
+
 	sendBuffer.message = MESSAGE_TEST;
 
 	correct(_path, sendBuffer.path);
 
 	uint16_t node_id = get_node_id_by_path(sendBuffer.path);
-	
+
 	sendMessage(node_id, &sendBuffer, sizeof(GeneralSendBuffer),
 					&receiveBuffer, sizeof(GeneralReceiveBuffer));
 	if(receiveBuffer.result)
@@ -894,10 +894,10 @@ int nrfsRawWrite(nrfs fs, nrfsFile _file, const void* buffer, uint64_t size, uin
     ExtentWriteReceiveBuffer bufferExtentWriteReceive;
 
     bufferExtentWriteSend.message = MESSAGE_RAWWRITE; /* Assign message type. */
-    
+
     correct((char*)_file, bufferExtentWriteSend.path);
 	uint16_t node_id = get_node_id_by_path(bufferExtentWriteSend.path);
-    
+
 	/*
 	* Copy data to registered buffer and post remote write.
 	*/
@@ -926,16 +926,16 @@ int nrfsRawRead(nrfs fs, nrfsFile _file, void* buffer, uint64_t size, uint64_t o
     ExtentReadReceiveBuffer bufferExtentReadReceive;
 
     bufferExtentReadSend.message = MESSAGE_RAWREAD;
-    
+
     correct((char*)_file, bufferExtentReadSend.path);
 	uint16_t node_id = get_node_id_by_path(bufferExtentReadSend.path);
-    
+
     bufferExtentReadSend.size = size; /* Assign size. */
     bufferExtentReadSend.offset = offset; /* Assign offset. */
 	uint64_t *value = (uint64_t *)(client->mm + 2 * 4096);
 	*value = 0;
-	sendMessage(node_id, &bufferExtentReadSend, sizeof(ExtentReadSendBuffer), 
-					&bufferExtentReadReceive, sizeof(ExtentReadReceiveBuffer));	
+	sendMessage(node_id, &bufferExtentReadSend, sizeof(ExtentReadSendBuffer),
+					&bufferExtentReadReceive, sizeof(ExtentReadReceiveBuffer));
 	while (*value == 0);
 	memcpy((void *)buffer, (void *)(client->mm + 2 * 4096), size);
 	// uint32_t *v = (uint32_t*)(mem.get_storage_addr() + size - sizeof(uint32_t));

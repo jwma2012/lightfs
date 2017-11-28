@@ -38,7 +38,7 @@ void write_test(int size, int op_time)
 	char path[255];
 	int i;
 	double start, end, rate, num;
-	int time_cost;
+	int time_cost;   //时间发生溢出。
 	char message[8];
 	int *p = (int*)message;
 
@@ -49,7 +49,7 @@ void write_test(int size, int op_time)
 	memset(buf, 'a', BUFFER_SIZE);
 
 	MPI_Barrier ( MPI_COMM_WORLD );
-	
+
 	start = MPI_Wtime();
 	for(i = 0; i < op_time; i++)
 	{
@@ -98,7 +98,7 @@ void read_test(int size, int op_time)
 	sprintf(path, "/file_%d", file_seq);
 
 	MPI_Barrier ( MPI_COMM_WORLD );
-	
+
 	start = MPI_Wtime();
 	for(i = 0; i < op_time; i++)
 	{

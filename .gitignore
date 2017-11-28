@@ -42,4 +42,5 @@ stamp-h1
 /build
 
 #tmp
-.tmp
+*.tmp
+~*
