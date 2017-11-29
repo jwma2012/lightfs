@@ -72,6 +72,7 @@ uint64_t MemoryManager::getServerSendAddress(uint16_t NodeID, uint64_t *buffer) 
     *buffer = (ServerSendBaseAddress +
         (NodeID - 1) * SERVER_MASSAGE_SIZE * SERVER_MASSAGE_NUM
         + offset * SERVER_MASSAGE_SIZE);
+    //显然需要满足offset < SERVER_MASSAGE_NUM = 8
     return offset;
 }
 
@@ -85,6 +86,7 @@ uint64_t MemoryManager::getServerRecvAddress(uint16_t NodeID, uint16_t offset) {
 
 uint64_t MemoryManager::getClientMessageAddress(uint16_t NodeID) {
     return ClientBaseAddress + (NodeID - ServerCount  - 1) * CLIENT_MESSAGE_SIZE;
+    //这是客户端nodeID，客户端ID大于serverCount。
 }
 
 uint64_t MemoryManager::getLocalLogAddress() {

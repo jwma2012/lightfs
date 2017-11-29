@@ -14,6 +14,7 @@ uint64_t LockService::WriteLock(uint16_t NodeID, uint64_t Address) {
     key = key << 16;
     key += ID;
     key = key << 32;
+    //64位的key的低32位都是0
     while (true) {
         if (__sync_bool_compare_and_swap((uint64_t *)LockAddress, 0ULL, key))
             break;
@@ -27,6 +28,7 @@ uint64_t LockService::WriteLock(uint16_t NodeID, uint64_t Address) {
 bool LockService::WriteUnlock(uint64_t key, uint16_t NodeID, uint64_t Address) {
     uint64_t LockAddress = MetaDataBaseAddress + Address;
     uint32_t *p = (uint32_t *)(LockAddress + 4);
+    //将高32位置为0
     *p = 0;
     return true;
 }

@@ -42,6 +42,12 @@
    @param   hashNode    Buffer of node hash. */
 NodeHash Storage::getNodeHash(UniqueHash *hashUnique)
 {
+  /*
+  typedef struct {
+  // 32-byte variable can hold all data in SHA-256 format.
+  uint64_t value[4];
+} UniqueHash;
+  */
     if (hashUnique == NULL) {
         fprintf(stderr, "Storage::getNodeHash: buffer is null.\n");
         exit(EXIT_FAILURE);             /* Exit due to null unique hash. */
@@ -72,7 +78,7 @@ Storage::Storage(char *buffer, char* bufferBlock, uint64_t countFile, uint64_t c
         Debug::notifyInfo("sizeof Directory Meta Size = %d MB", tableDirectoryMeta->sizeBufferUsed / 1024 / 1024);
 
         tableBlock = new Table<Block>(bufferBlock, countBlock); /* Initialize block table. */
-        
+
         this->countNode = countNode;    /* Assign count of nodes. */
         sizeBufferUsed = hashtable->sizeBufferUsed + tableFileMeta->sizeBufferUsed + tableDirectoryMeta->sizeBufferUsed + tableBlock->sizeBufferUsed; /* Size of used bytes in buffer. */
     }

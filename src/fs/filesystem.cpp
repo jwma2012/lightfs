@@ -73,6 +73,7 @@ void FileSystem::updateRemoteMeta(uint16_t parentNodeID, DirectoryMeta *meta, ui
 		return;
 	}
     uint64_t size = sizeof(DirectoryMeta) - sizeof(DirectoryMetaTuple) * (MAX_DIRECTORY_COUNT - meta->count);
+    //这是一个正数，
 	memcpy((void *)SendBuffer, (void *)meta, size);
     server->getRdmaSocketInstance()->RdmaWrite(parentNodeID, SendBuffer, RemoteBuffer, size, -1, 1);
 	server->getRdmaSocketInstance()->RdmaRead(parentNodeID, SendBuffer, RemoteBuffer, size, 1);
@@ -84,8 +85,8 @@ void RdmaCall(uint16_t NodeID, char *bufferSend, uint64_t lengthSend, char *buff
     server->getRPCClientInstance()->RdmaCall(NodeID, bufferSend, lengthSend, bufferReceive, lengthReceive);
 }
 
-/** Implemented functions. **/ 
-/* Check if node hash is local. 
+/** Implemented functions. **/
+/* Check if node hash is local.
    @param   hashNode    Given node hash.
    @return              If given node hash points to local node return true, otherwise return false. */
 bool FileSystem::checkLocal(NodeHash hashNode)
@@ -97,7 +98,7 @@ bool FileSystem::checkLocal(NodeHash hashNode)
     }
 }
 
-/* Get parent directory. 
+/* Get parent directory.
    Examples:    "/parent/file" -> "/parent" return true
                 "/file"        -> "/" return true
                 "/"            -> return false
@@ -119,7 +120,7 @@ bool FileSystem::getParentDirectory(const char *path, char *parent) { /* Assume 
                     parent[i] = '\0';   /* Cut string. */
                     resultCut = true;
                     break;
-                } 
+                }
             }
             if (resultCut == false) {
                 return false;           /* There is no '/' in string. It is an extra check. */
@@ -127,7 +128,7 @@ bool FileSystem::getParentDirectory(const char *path, char *parent) { /* Assume 
                 if (parent[0] == '\0') { /* If format is '/path' which contains only one '/' then parent is '/'. */
                     parent[0] = '/';
                     parent[1] = '\0';
-                    return true;        /* Succeed. Parent is root directory. */ 
+                    return true;        /* Succeed. Parent is root directory. */
                 } else {
                     return true;        /* Succeed. */
                 }
@@ -136,7 +137,7 @@ bool FileSystem::getParentDirectory(const char *path, char *parent) { /* Assume 
     }
 }
 
-/* Get file name from path. 
+/* Get file name from path.
    Examples:    '/parent/file' -> 'file' return true
                 '/file'        -> 'file' return true
                 '/'            -> return false
@@ -157,7 +158,7 @@ bool FileSystem::getNameFromPath(const char *path, char *name) { /* Assume path 
                 if (path[i] == '/') {
                     resultCut = true;
                     break;
-                } 
+                }
             }
             if (resultCut == false) {
                 return false;           /* There is no '/' in string. It is an extra check. */
@@ -209,28 +210,28 @@ void FileSystem::unlockReadHashItem(uint64_t key, NodeHash hashNode, AddressHash
 }
 
 /* Send message. */
-bool FileSystem::sendMessage(NodeHash hashNode, void *bufferSend, uint64_t lengthSend, 
+bool FileSystem::sendMessage(NodeHash hashNode, void *bufferSend, uint64_t lengthSend,
     void *bufferReceive, uint64_t lengthReceive)
 {
     return true;//return _cmd.sendMessage((uint16_t)hashNode, (char *)bufferSend, lengthSend, (char *)bufferReceive, lengthReceive); /* Actual send message. */
 }
 
 /* Parse message. */
-void FileSystem::parseMessage(char *bufferRequest, char *bufferResponse) 
+void FileSystem::parseMessage(char *bufferRequest, char *bufferResponse)
 {
     /* No check on parameters. */
     GeneralSendBuffer *bufferGeneralSend = (GeneralSendBuffer *)bufferRequest; /* Send and request. */
     GeneralReceiveBuffer *bufferGeneralReceive = (GeneralReceiveBuffer *)bufferResponse; /* Receive and response. */
     bufferGeneralReceive->message = MESSAGE_RESPONSE; /* Fill response message. */
     switch(bufferGeneralSend->message) {
-        case MESSAGE_ADDMETATODIRECTORY: 
+        case MESSAGE_ADDMETATODIRECTORY:
         {
-            AddMetaToDirectorySendBuffer *bufferSend = 
+            AddMetaToDirectorySendBuffer *bufferSend =
                 (AddMetaToDirectorySendBuffer *)bufferGeneralSend;
             UpdataDirectoryMetaReceiveBuffer *bufferReceive = (UpdataDirectoryMetaReceiveBuffer *)bufferResponse;
             bufferReceive->result = addMetaToDirectory(
-                bufferSend->path, bufferSend->name, 
-                bufferSend->isDirectory, 
+                bufferSend->path, bufferSend->name,
+                bufferSend->isDirectory,
                 &(bufferReceive->TxID),
                 &(bufferReceive->srcBuffer),
                 &(bufferReceive->desBuffer),
@@ -239,9 +240,9 @@ void FileSystem::parseMessage(char *bufferRequest, char *bufferResponse)
                 &(bufferReceive->offset));
             break;
         }
-        case MESSAGE_REMOVEMETAFROMDIRECTORY: 
+        case MESSAGE_REMOVEMETAFROMDIRECTORY:
         {
-            RemoveMetaFromDirectorySendBuffer *bufferSend = 
+            RemoveMetaFromDirectorySendBuffer *bufferSend =
                 (RemoveMetaFromDirectorySendBuffer *)bufferGeneralSend;
             UpdataDirectoryMetaReceiveBuffer *bufferReceive = (UpdataDirectoryMetaReceiveBuffer *)bufferResponse;
             bufferGeneralReceive->result = removeMetaFromDirectory(
@@ -258,45 +259,45 @@ void FileSystem::parseMessage(char *bufferRequest, char *bufferResponse)
         {
             DoRemoteCommitSendBuffer *bufferSend = (DoRemoteCommitSendBuffer *)bufferGeneralSend;
             bufferGeneralReceive->result = updateDirectoryMeta(
-                bufferSend->path, bufferSend->TxID, bufferSend->srcBuffer, 
+                bufferSend->path, bufferSend->TxID, bufferSend->srcBuffer,
                 bufferSend->desBuffer, bufferSend->size, bufferSend->key, bufferSend->offset);
             break;
         }
-        case MESSAGE_MKNOD: 
+        case MESSAGE_MKNOD:
         {
             bufferGeneralReceive->result = mknod(bufferGeneralSend->path);
             break;
         }
-        case MESSAGE_GETATTR: 
+        case MESSAGE_GETATTR:
         {
-            GetAttributeReceiveBuffer *bufferReceive = 
+            GetAttributeReceiveBuffer *bufferReceive =
                 (GetAttributeReceiveBuffer *)bufferGeneralReceive;
             bufferReceive->result = getattr(bufferGeneralSend->path, &(bufferReceive->attribute));
             break;
         }
-        case MESSAGE_ACCESS: 
+        case MESSAGE_ACCESS:
         {
             bufferGeneralReceive->result = access(bufferGeneralSend->path);
             break;
         }
-        case MESSAGE_MKDIR: 
+        case MESSAGE_MKDIR:
         {
             bufferGeneralReceive->result = mkdir(bufferGeneralSend->path);
             break;
         }
-        case MESSAGE_READDIR: 
+        case MESSAGE_READDIR:
         {
-            ReadDirectoryReceiveBuffer *bufferReceive = 
+            ReadDirectoryReceiveBuffer *bufferReceive =
                 (ReadDirectoryReceiveBuffer *)bufferGeneralReceive;
             bufferReceive->result = readdir(bufferGeneralSend->path, &(bufferReceive->list));
             break;
         }
         case MESSAGE_READDIRECTORYMETA:
         {
-        	ReadDirectoryMetaReceiveBuffer *bufferReceive = 
+        	ReadDirectoryMetaReceiveBuffer *bufferReceive =
         		(ReadDirectoryMetaReceiveBuffer *)bufferGeneralReceive;
-        	bufferReceive->result = readDirectoryMeta(bufferGeneralSend->path, 
-        		&(bufferReceive->meta), 
+        	bufferReceive->result = readDirectoryMeta(bufferGeneralSend->path,
+        		&(bufferReceive->meta),
         		&(bufferReceive->hashAddress),
         		&(bufferReceive->metaAddress),
         		&(bufferReceive->parentNodeID));
@@ -304,11 +305,11 @@ void FileSystem::parseMessage(char *bufferRequest, char *bufferResponse)
         }
         case MESSAGE_EXTENTREAD:
         {
-            ExtentReadSendBuffer *bufferSend = 
+            ExtentReadSendBuffer *bufferSend =
                 (ExtentReadSendBuffer *)bufferGeneralSend;
-            ExtentReadReceiveBuffer *bufferReceive = 
+            ExtentReadReceiveBuffer *bufferReceive =
                 (ExtentReadReceiveBuffer *)bufferGeneralReceive;
-            bufferReceive->result = extentRead(bufferSend->path, 
+            bufferReceive->result = extentRead(bufferSend->path,
                 bufferSend->size, bufferSend->offset, &(bufferReceive->fpi),
                  &(bufferReceive->offset), &(bufferReceive->key));
             unlockReadHashItem(bufferReceive->key, (NodeHash)bufferSend->sourceNodeID, (AddressHash)(bufferReceive->offset));
@@ -316,90 +317,90 @@ void FileSystem::parseMessage(char *bufferRequest, char *bufferResponse)
         }
         case MESSAGE_EXTENTWRITE:
         {
-            ExtentWriteSendBuffer *bufferSend = 
+            ExtentWriteSendBuffer *bufferSend =
                 (ExtentWriteSendBuffer *)bufferGeneralSend;
-            ExtentWriteReceiveBuffer *bufferReceive = 
+            ExtentWriteReceiveBuffer *bufferReceive =
                 (ExtentWriteReceiveBuffer *)bufferGeneralReceive;
-            bufferReceive->result = extentWrite(bufferSend->path, 
-                bufferSend->size, bufferSend->offset, &(bufferReceive->fpi), 
+            bufferReceive->result = extentWrite(bufferSend->path,
+                bufferSend->size, bufferSend->offset, &(bufferReceive->fpi),
                 &(bufferReceive->offset), &(bufferReceive->key));
             unlockWriteHashItem(bufferReceive->key, (NodeHash)bufferSend->sourceNodeID, (AddressHash)(bufferReceive->offset));
             break;
         }
         case MESSAGE_UPDATEMETA:
         {
-            // UpdateMetaSendBuffer *bufferSend = 
+            // UpdateMetaSendBuffer *bufferSend =
             //     (UpdateMetaSendBuffer *)bufferGeneralSend;
-            // bufferGeneralReceive->result = updateMeta(bufferSend->path, 
+            // bufferGeneralReceive->result = updateMeta(bufferSend->path,
             //     &(bufferSend->metaFile), bufferSend->key);
             break;
         }
         case MESSAGE_EXTENTREADEND:
         {
-            // ExtentReadEndSendBuffer *bufferSend = 
+            // ExtentReadEndSendBuffer *bufferSend =
             //     (ExtentReadEndSendBuffer *)bufferGeneralSend;
             // bufferGeneralReceive->result = extentReadEnd(bufferSend->key, bufferSend->path);
             break;
         }
-        case MESSAGE_TRUNCATE: 
+        case MESSAGE_TRUNCATE:
         {
-            TruncateSendBuffer *bufferSend = 
+            TruncateSendBuffer *bufferSend =
                 (TruncateSendBuffer *)bufferGeneralSend;
             bufferGeneralReceive->result = truncate(bufferSend->path, bufferSend->size);
             break;
         }
-        case MESSAGE_RMDIR: 
+        case MESSAGE_RMDIR:
         {
             bufferGeneralReceive->result = rmdir(bufferGeneralSend->path);
             break;
         }
         case MESSAGE_REMOVE:
         {
-            GetAttributeReceiveBuffer *bufferReceive = 
+            GetAttributeReceiveBuffer *bufferReceive =
                 (GetAttributeReceiveBuffer *)bufferGeneralReceive;
             bufferReceive->result = remove(bufferGeneralSend->path, &(bufferReceive->attribute));
             break;
         }
         case MESSAGE_FREEBLOCK:
         {
-            BlockFreeSendBuffer *bufferSend = 
+            BlockFreeSendBuffer *bufferSend =
                 (BlockFreeSendBuffer *)bufferGeneralSend;
             bufferGeneralReceive->result = blockFree(bufferSend->startBlock, bufferSend->countBlock);
             break;
         }
-        case MESSAGE_MKNODWITHMETA: 
+        case MESSAGE_MKNODWITHMETA:
         {
-            MakeNodeWithMetaSendBuffer *bufferSend = 
+            MakeNodeWithMetaSendBuffer *bufferSend =
                 (MakeNodeWithMetaSendBuffer *)bufferGeneralSend;
             bufferGeneralReceive->result = mknodWithMeta(bufferSend->path, &(bufferSend->metaFile));
             break;
         }
-        case MESSAGE_RENAME: 
+        case MESSAGE_RENAME:
         {
-            RenameSendBuffer *bufferSend = 
+            RenameSendBuffer *bufferSend =
                 (RenameSendBuffer *)bufferGeneralSend;
             bufferGeneralReceive->result = rename(bufferSend->pathOld, bufferSend->pathNew);
             break;
         }
         case MESSAGE_RAWWRITE:
         {
-            ExtentWriteSendBuffer *bufferSend = 
+            ExtentWriteSendBuffer *bufferSend =
                 (ExtentWriteSendBuffer *)bufferGeneralSend;
-            ExtentWriteReceiveBuffer *bufferReceive = 
+            ExtentWriteReceiveBuffer *bufferReceive =
                 (ExtentWriteReceiveBuffer *)bufferGeneralReceive;
-            bufferReceive->result = extentWrite(bufferSend->path, 
-                bufferSend->size, bufferSend->offset, &(bufferReceive->fpi), 
+            bufferReceive->result = extentWrite(bufferSend->path,
+                bufferSend->size, bufferSend->offset, &(bufferReceive->fpi),
                 &(bufferReceive->offset), &(bufferReceive->key));
             unlockWriteHashItem(bufferReceive->key, (NodeHash)bufferSend->sourceNodeID, (AddressHash)(bufferReceive->offset));
             break;
         }
         case MESSAGE_RAWREAD:
         {
-            ExtentReadSendBuffer *bufferSend = 
+            ExtentReadSendBuffer *bufferSend =
                 (ExtentReadSendBuffer *)bufferGeneralSend;
-            ExtentReadReceiveBuffer *bufferReceive = 
+            ExtentReadReceiveBuffer *bufferReceive =
                 (ExtentReadReceiveBuffer *)bufferGeneralReceive;
-            bufferReceive->result = extentRead(bufferSend->path, 
+            bufferReceive->result = extentRead(bufferSend->path,
                 bufferSend->size, bufferSend->offset, &(bufferReceive->fpi),
                  &(bufferReceive->offset), &(bufferReceive->key));
             unlockReadHashItem(bufferReceive->key, (NodeHash)bufferSend->sourceNodeID, (AddressHash)(bufferReceive->offset));
@@ -416,7 +417,7 @@ void FileSystem::parseMessage(char *bufferRequest, char *bufferResponse)
    @param   name            Name of meta.
    @param   isDirectory     Judge if it is directory.
    @return                  If succeed return true, otherwise return false. */
-bool FileSystem::addMetaToDirectory(const char *path, const char *name, bool isDirectory, 
+bool FileSystem::addMetaToDirectory(const char *path, const char *name, bool isDirectory,
     uint64_t *TxID, uint64_t *srcBuffer, uint64_t *desBuffer, uint64_t *size, uint64_t *key, uint64_t *offset)
 {
     Debug::debugTitle("FileSystem::addMetaToDirectory");
@@ -482,8 +483,8 @@ bool FileSystem::addMetaToDirectory(const char *path, const char *name, bool isD
 	    strcpy(bufferAddMetaToDirectorySend.name, name);  /* Assign name. */
         bufferAddMetaToDirectorySend.isDirectory = isDirectory;
         UpdataDirectoryMetaReceiveBuffer bufferGeneralReceive;
-        RdmaCall((uint16_t)hashNode, 
-                 (char *)&bufferAddMetaToDirectorySend, 
+        RdmaCall((uint16_t)hashNode,
+                 (char *)&bufferAddMetaToDirectorySend,
                  (uint64_t)sizeof(AddMetaToDirectorySendBuffer),
                  (char *)&bufferGeneralReceive,
                  (uint64_t)sizeof(UpdataDirectoryMetaReceiveBuffer));
@@ -502,7 +503,7 @@ bool FileSystem::addMetaToDirectory(const char *path, const char *name, bool isD
    @param   name            Name of meta.
    @param   isDirectory     Judge if it is directory.
    @return                  If succeed return true, otherwise return false. */
-bool FileSystem::removeMetaFromDirectory(const char *path, const char *name, 
+bool FileSystem::removeMetaFromDirectory(const char *path, const char *name,
     uint64_t *TxID, uint64_t *srcBuffer, uint64_t *desBuffer, uint64_t *size,  uint64_t *key, uint64_t *offset)
 {
     Debug::debugTitle("FileSystem::removeMetaFromDirectory");
@@ -596,7 +597,7 @@ bool FileSystem::removeMetaFromDirectory(const char *path, const char *name,
     }
 }
 
-bool FileSystem::updateDirectoryMeta(const char *path, uint64_t TxID, uint64_t srcBuffer, 
+bool FileSystem::updateDirectoryMeta(const char *path, uint64_t TxID, uint64_t srcBuffer,
         uint64_t desBuffer, uint64_t size, uint64_t key, uint64_t offset) {
     Debug::debugTitle("FileSystem::updateDirectoryMeta");
     if (path == NULL) {
@@ -656,7 +657,7 @@ bool FileSystem::updateDirectoryMeta(const char *path, uint64_t TxID, uint64_t s
 
 /* Make node (file) with file meta.
    @param   path        Path of file.
-   @param   metaFile    File meta. 
+   @param   metaFile    File meta.
    @return              If succeed return true, otherwise return false. */
 bool FileSystem::mknodWithMeta(const char *path, FileMeta *metaFile)
 {
@@ -700,12 +701,12 @@ bool FileSystem::mknodWithMeta(const char *path, FileMeta *metaFile)
             return false;
         }
     }
-} 
+}
 
-/* Make node. That is to create an empty file. 
+/* Make node. That is to create an empty file.
    @param   path    Path of file.
    @return          If operation succeeds then return true, otherwise return false. */
-bool FileSystem::mknod(const char *path) 
+bool FileSystem::mknod(const char *path)
 {
 #ifdef TRANSACTION_2PC
     return mknod2pc(path);
@@ -715,7 +716,7 @@ bool FileSystem::mknod(const char *path)
 #endif
 }
 
-bool FileSystem::mknodcd(const char *path) 
+bool FileSystem::mknodcd(const char *path)
 {
     Debug::debugTitle("FileSystem::mknod");
     Debug::debugItem("Stage 1. Entry point. Path: %s.", path);
@@ -754,12 +755,12 @@ bool FileSystem::mknodcd(const char *path)
                         // TxDistributedPrepare(DistributedTxID, false);
                         result = false; /* Fail due to existence of path. */
                     } else {
-                    	
+
                     	/* Update directory meta first. */
                     	parentMeta.count++; /* Add count of names under directory. */
                         strcpy(parentMeta.tuple[parentMeta.count - 1].names, name); /* Add name. */
                         parentMeta.tuple[parentMeta.count - 1].isDirectories = isDirectory; /* Add directory state. */
-                        
+
                         Debug::debugItem("Stage 3. Create file meta.");
                         uint64_t indexFileMeta;
                         FileMeta metaFile;
@@ -802,7 +803,7 @@ bool FileSystem::mknodcd(const char *path)
         }
     }
 }
-bool FileSystem::mknod2pc(const char *path) 
+bool FileSystem::mknod2pc(const char *path)
 {
     Debug::debugTitle("FileSystem::mknod");
     Debug::debugItem("Stage 1. Entry point. Path: %s.", path);
@@ -882,7 +883,7 @@ bool FileSystem::mknod2pc(const char *path)
         }
     }
 }
-/* Get attributes. 
+/* Get attributes.
    @param   path        Path of file or folder.
    @param   attribute   Attribute buffer of file to get.
    @return              If operation succeeds then return true, otherwise return false. */
@@ -970,8 +971,8 @@ bool FileSystem::access(const char *path)
     }
 }
 
-/* Make directory. 
-   @param   path    Path of folder. 
+/* Make directory.
+   @param   path    Path of folder.
    @return          If operation succeeds then return true, otherwise return false. */
 // bool FileSystem::mkdir(const char *path)
 // {
@@ -991,7 +992,7 @@ bool FileSystem::access(const char *path)
 //     return true;
 // }
 
-bool FileSystem::mkdir(const char *path) 
+bool FileSystem::mkdir(const char *path)
 {
 #ifdef TRANSACTION_2PC
     return mkdir2pc(path);
@@ -1043,7 +1044,7 @@ bool FileSystem::mkdircd(const char *path)
                     	parentMeta.count++; /* Add count of names under directory. */
                         strcpy(parentMeta.tuple[parentMeta.count - 1].names, name); /* Add name. */
                         parentMeta.tuple[parentMeta.count - 1].isDirectories = true; /* Add directory state. */
-                        
+
                         Debug::debugItem("Stage 3. Write directory meta.");
                         uint64_t indexDirectoryMeta;
                         DirectoryMeta metaDirectory;
@@ -1054,7 +1055,7 @@ bool FileSystem::mkdircd(const char *path)
                         // TxDistributedPrepare(DistributedTxID, true);
                         /* Start phase 2, commit it. */
                         updateRemoteMeta(parentNodeID, &parentMeta, parentMetaAddress, parentHashAddress);
-                        
+
                         if (storage->tableDirectoryMeta->create(&indexDirectoryMeta, &metaDirectory) == false) {
                             result = false; /* Fail due to create error. */
                         } else {
@@ -1168,7 +1169,7 @@ bool FileSystem::mkdir2pc(const char *path)
     }
 }
 
-/* Read filenames in directory. 
+/* Read filenames in directory.
    @param   path    Path of folder.
    @param   list    List buffer of names in directory.
    @return          If operation succeeds then return true, otherwise return false. */
@@ -1205,7 +1206,7 @@ bool FileSystem::readdir(const char *path, nrfsfilelist *list)
                                 strcpy(list->tuple[i].names, metaDirectory.tuple[i].names);
                                 if (metaDirectory.tuple[i].isDirectories == true) {
                                     list->tuple[i].isDirectories = true; /* Mode 1 for directory. */
-                                } else { 
+                                } else {
                                     list->tuple[i].isDirectories = false; /* Mode 0 for file. */
                                 }
                             }
@@ -1223,7 +1224,7 @@ bool FileSystem::readdir(const char *path, nrfsfilelist *list)
     }
 }
 
-/* Read filenames in directory. 
+/* Read filenames in directory.
    @param   path    Path of folder.
    @param   list    List buffer of names in directory.
    @return          If operation succeeds then return true, otherwise return false. */
@@ -1255,7 +1256,7 @@ bool FileSystem::recursivereaddir(const char *path, int depth)
 					printf("\t");
                                 if (metaDirectory.tuple[i].isDirectories == true) {
 					printf("%d DIR %s\n", (int)i, metaDirectory.tuple[i].names);
-					char *childPath = (char *)malloc(sizeof(char) * 
+					char *childPath = (char *)malloc(sizeof(char) *
 						(strlen(path) + strlen(metaDirectory.tuple[i].names) + 2));
 					strcpy(childPath, path);
 					if (strcmp(childPath, "/") != 0)
@@ -1280,7 +1281,7 @@ bool FileSystem::recursivereaddir(const char *path, int depth)
 }
 
 
-/* Read directory meta. 
+/* Read directory meta.
    @param   path    Path of folder.
    @param   meta    directory meta pointer.
    @return          If operation succeeds then return true, otherwise return false. */
@@ -1351,10 +1352,10 @@ bool FileSystem::readDirectoryMeta(const char *path, DirectoryMeta *meta, uint64
 
 
  /*There are 2 schemas of blocks.
- * 
+ *
  *      Schema 1, only one block: ("[" means start byte and "]" means end byte.)
  *
- *      Bound of Block     + start_block = end_block 
+ *      Bound of Block     + start_block = end_block
  *           Index         |
  *      -------------------+----------------------------------------+--------------------
  *                         |                                        |
@@ -1376,7 +1377,7 @@ bool FileSystem::readDirectoryMeta(const char *path, DirectoryMeta *meta, uint64
  *                         |               |  0  |  1  |   ...   |  i  |   ...   |             |
  *      -------------------+----[----------[-----+-----+---------[-----+---------+---------]---+--------------------
  *                              |          |                     |                         |
- *     start_block * BLOCK_SIZE +          + (start_block + 1)   + (start_block + 1 + i)   + start_block * BLOCK_SIZE 
+ *     start_block * BLOCK_SIZE +          + (start_block + 1)   + (start_block + 1 + i)   + start_block * BLOCK_SIZE
  *      + offset % BLOCK_SIZE   \             * BLOCK_SIZE          * BLOCK_SIZE          /   + offset % BLOCK_SIZE + size - 1
  *                               ------------------------ size  --------------------------
  *
@@ -1398,9 +1399,9 @@ bool FileSystem::readDirectoryMeta(const char *path, DirectoryMeta *meta, uint64
  *      end_block = (offset + size - 1) / BLOCK_SIZE
  */
 
-/* Fill file position information for read and write. No check on parameters. 
+/* Fill file position information for read and write. No check on parameters.
    @param   size        Size to operate.
-   @param   offset      Offset to operate. 
+   @param   offset      Offset to operate.
    @param   fpi         File position information.
    @param   metaFile    File meta. */
 /* FIXME: review logic here. */
@@ -1457,7 +1458,7 @@ void FileSystem::fillFilePositionInformation(uint64_t size, uint64_t offset, fil
         fpi->tuple[fpi->len - 1].size = sizeInEndExtent; /* Assign size. */
         Debug::debugItem("Stage 13.");
     }
-}  
+}
 
 /* Read extent. That is to parse the part to read in file position information.
    @param   path    Path of file.
@@ -1512,7 +1513,7 @@ bool FileSystem::extentRead(const char *path, uint64_t size, uint64_t offset, fi
                             fillFilePositionInformation(size, offset, fpi, &metaFile); /* Fill file position information. */
                             result = true; /* Succeed. */
                         }
-                    } 
+                    }
                 }
             }
             /* Do not unlock here. */
@@ -1623,19 +1624,19 @@ bool FileSystem::extentWrite(const char *path, uint64_t size, uint64_t offset, f
                                         } else { /* So we need to modify the allocation way in table class. */
                                             indexLastCreatedBlock = -1;
                                             if(boundCurrentExtraExtent >= 0) {
-                                                indexLastCreatedBlock = metaFile->tuple[boundCurrentExtraExtent].indexExtentStartBlock 
+                                                indexLastCreatedBlock = metaFile->tuple[boundCurrentExtraExtent].indexExtentStartBlock
                                                 + metaFile->tuple[boundCurrentExtraExtent].countExtentBlock;
                                             }
-                                            Debug::debugItem("%d, %d, %d", 
+                                            Debug::debugItem("%d, %d, %d",
                                             boundCurrentExtraExtent,
                                             indexLastCreatedBlock,
                                             indexCurrentExtraBlock);
 
-                                            if(boundCurrentExtraExtent >= 0 && 
+                                            if(boundCurrentExtraExtent >= 0 &&
                                                 (indexCurrentExtraBlock == indexLastCreatedBlock))
                                             {
                                                 metaFile->tuple[boundCurrentExtraExtent].countExtentBlock++; /* Increment of count of blocks in current extent. */
-                                            } else if (boundCurrentExtraExtent == -1 || 
+                                            } else if (boundCurrentExtraExtent == -1 ||
                                             indexCurrentExtraBlock != indexLastCreatedBlock) { /* Separate block index generates a new extent. */
                                                 boundCurrentExtraExtent++;
                                                 metaFile->tuple[boundCurrentExtraExtent].hashNode = hashLocalNode; /* Assign local node hash. */
@@ -1660,13 +1661,13 @@ bool FileSystem::extentWrite(const char *path, uint64_t size, uint64_t offset, f
                                 } else {
                                     metaFile->size = (offset + size) > metaFile->size ? (offset + size) : metaFile->size; /* Update size of file in meta. */
                                     fillFilePositionInformation(size, offset, fpi, metaFile); /* Fill file position information. */
-                                     /*printf("(int)(fpi->len) = %d, (int)(fpi->offset[0]) = %d, (int)(fpi->size[0]) = %d\n", 
+                                     /*printf("(int)(fpi->len) = %d, (int)(fpi->offset[0]) = %d, (int)(fpi->size[0]) = %d\n",
                                                 (int)(fpi->len), (int)(fpi->offset[0]), (int)(fpi->size[0]));*/
                                     result = true; /* Succeed. */
                                 }
                             }
                         }
-                    } 
+                    }
                 }
                 if(result)
                 {
@@ -1740,7 +1741,7 @@ bool FileSystem::updateMeta(const char *path, FileMeta *metaFile, uint64_t key)
 
 /* Truncate file. Currently only support shrink file but cannot enlarge.
    @param   path    Path of file.
-   @param   size    Size of file. 
+   @param   size    Size of file.
    @return          If operation succeeds then return 0, otherwise return negative value. */
 bool FileSystem::truncate(const char *path, uint64_t size) /* Truncate size of file to 0. */
 {
@@ -1785,7 +1786,7 @@ bool FileSystem::truncate(const char *path, uint64_t size) /* Truncate size of f
                                 bool found = false;
                                 uint64_t i;
                                 for (i = 0; i < metaFile.count; i++) {
-                                    if ((countTotalBlockTillLastExtentEnd + metaFile.tuple[i].countExtentBlock 
+                                    if ((countTotalBlockTillLastExtentEnd + metaFile.tuple[i].countExtentBlock
                                         >= countNewTotalBlock)) {
                                         found = true;
                                         break;
@@ -1797,13 +1798,13 @@ bool FileSystem::truncate(const char *path, uint64_t size) /* Truncate size of f
                                 } else {
                                     uint64_t resultFor = true;
                                     // for (uint64_t j = (countNewTotalBlock - countTotalBlockTillLastExtentEnd - 1 + 1); /* Bound of first block to truncate. A -1 is to convert count to bound. A +1 is to move bound of last kept block to bound of first to truncate. */
-                                    //     j < metaFile.countExtentBlock[i]; j++) {  /* i is current extent. */ 
+                                    //     j < metaFile.countExtentBlock[i]; j++) {  /* i is current extent. */
                                     //     if (storage->tableBlock->remove(metaFile.indexExtentStartBlock[i] + j) == false) {
                                     //         resultFor = false;
                                     //         break;
                                     //     }
                                     // }
-                                    for (int j = metaFile.tuple[i].countExtentBlock - 1; 
+                                    for (int j = metaFile.tuple[i].countExtentBlock - 1;
                                         j >= (int)(countNewTotalBlock - countTotalBlockTillLastExtentEnd - 1 + 1); j--) { /* i is current extent. */ /* Bound of first block to truncate. A -1 is to convert count to bound. A +1 is to move bound of last kept block to bound of first to truncate. */
                                         if (storage->tableBlock->remove(metaFile.tuple[i].indexExtentStartBlock + j) == false) {
                                             resultFor = false;
@@ -1860,7 +1861,7 @@ bool FileSystem::truncate(const char *path, uint64_t size) /* Truncate size of f
 /* Remove directory (Unused).
    @param   path    Path of directory.
    @return          If operation succeeds then return true, otherwise return false. */
-bool FileSystem::rmdir(const char *path) 
+bool FileSystem::rmdir(const char *path)
 {
     Debug::debugTitle("FileSystem::rmdir");
     Debug::debugItem("Stage 1. Entry point. Path: %s.", path);
@@ -1927,10 +1928,10 @@ bool FileSystem::rmdir(const char *path)
     }
 }
 
-/* Remove file or empty directory. 
+/* Remove file or empty directory.
    @param   path    Path of file or directory.
    @return          If operation succeeds then return true, otherwise return false. */
-bool FileSystem::remove(const char *path, FileMeta *metaFile) 
+bool FileSystem::remove(const char *path, FileMeta *metaFile)
 {
 #ifdef TRANSACTION_2PC
     return remove2pc(path, metaFile);
@@ -2017,9 +2018,9 @@ bool FileSystem::removecd(const char *path, FileMeta *metaFile)
 	                                    }
 	                                }
                             	}
-                                
+
                             }
-                        }   
+                        }
                     } else {
                         if (storage->tableFileMeta->get(indexMeta, metaFile) == false) {
                             result = false; /* Fail due to get file meta error. */
@@ -2162,9 +2163,9 @@ bool FileSystem::remove2pc(const char *path, FileMeta *metaFile)
                                         }
                                     }
                                 }
-                                
+
                             }
-                        }   
+                        }
                     } else {
                         if (storage->tableFileMeta->get(indexMeta, metaFile) == false) {
                             result = false; /* Fail due to get file meta error. */
@@ -2245,11 +2246,11 @@ bool FileSystem::blockFree(uint64_t startBlock, uint64_t countBlock)
     }
     return result;
 }
-/* Rename file. 
+/* Rename file.
    @param   pathOld     Old path.
    @param   pathNew     New path.
    @return              If operation succeeds then return true, otherwise return false. */
-bool FileSystem::rename(const char *pathOld, const char *pathNew) 
+bool FileSystem::rename(const char *pathOld, const char *pathNew)
 {
     Debug::debugTitle("FileSystem::rename");
     Debug::debugItem("Stage 1. Entry point. Path: %s.", pathNew);
@@ -2316,7 +2317,7 @@ bool FileSystem::rename(const char *pathOld, const char *pathNew)
     }
 }
 
-/* Initialize root directory. 
+/* Initialize root directory.
    @param   LocalNode     Local Node ID.
 */
 void FileSystem::rootInitialize(NodeHash LocalNode)
@@ -2346,19 +2347,20 @@ void FileSystem::rootInitialize(NodeHash LocalNode)
     }
 }
 
-/* Constructor of file system. 
-   @param   buffer              Buffer of memory.
+/* Constructor of file system.
+   @param   buffer              Buffer of metadata memory.
+   @param   bufferBlock         Buffer of data memory.
    @param   countFile           Max count of file.
    @param   countDirectory      Max count of directory.
-   @param   countBlock          Max count of blocks. 
+   @param   countBlock          Max count of blocks.
    @param   countNode           Max count of nodes.
    @param   hashLocalNode       Local node hash. From 1 to countNode. */
 FileSystem::FileSystem(char *buffer, char *bufferBlock, uint64_t countFile,
-                       uint64_t countDirectory, uint64_t countBlock, 
+                       uint64_t countDirectory, uint64_t countBlock,
                        uint64_t countNode, NodeHash hashLocalNode)
 {
     if ((buffer == NULL) || (bufferBlock == NULL) || (countFile == 0) || (countDirectory == 0) ||
-        (countBlock == 0) || (countNode == 0) || (hashLocalNode < 1) || 
+        (countBlock == 0) || (countNode == 0) || (hashLocalNode < 1) ||
         (hashLocalNode > countNode)) {
         fprintf(stderr, "FileSystem::FileSystem: parameter error.\n");
         exit(EXIT_FAILURE);             /* Exit due to parameter error. */

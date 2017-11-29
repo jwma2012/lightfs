@@ -20,6 +20,16 @@ RPCServer::RPCServer(int _cqSize) :cqSize(_cqSize) {
               2000,
               conf->getServerCount(),
               socket->getNodeID());
+
+/* Constructor of file system.
+   @param   buffer              Buffer of metadata memory.
+   @param   bufferBlock         Buffer of data memory.
+   @param   countFile           Max count of file.
+   @param   countDirectory      Max count of directory.
+   @param   countBlock          Max count of blocks.
+   @param   countNode           Max count of nodes.
+   @param   hashLocalNode       Local node hash. From 1 to countNode. */
+
 	fs->rootInitialize(socket->getNodeID());
 	wk = new thread[cqSize]();
 	for (int i = 0; i < cqSize; i++)

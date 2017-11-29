@@ -10,7 +10,7 @@ RPCClient::RPCClient(Configuration *_conf, RdmaSocket *_socket, MemoryManager *_
 RPCClient::RPCClient() {
 	isServer = false;
 	taskID = 1;
-	mm = (uint64_t)malloc(sizeof(char) * (1024 * 4 + 1024 * 1024 * 4)); //44MB的空间
+	mm = (uint64_t)malloc(sizeof(char) * (1024 * 4 + 1024 * 1024 * 4)); //约4MB的空间
 	conf = new Configuration();
 	socket = new RdmaSocket(1, mm, (1024 * 4 + 1024 * 1024 * 4), conf, false, 0);
 	socket->RdmaConnect();
@@ -62,6 +62,13 @@ bool RPCClient::RdmaCall(uint16_t DesNodeID, char *bufferSend, uint64_t lengthSe
 	memcpy((void *)sendBuffer, (void *)bufferSend, lengthSend);
 	_mm_clflush(recv);
 	asm volatile ("sfence\n" : : );
+	/**
+	SFENCE,LFENCE,MFENCE指令提供了高效的方式来保证读写内存的排序,这种操作发生在产生弱排序数据的程序和读取这个数据的程序之间。
+   SFENCE——串行化发生在SFENCE指令之前的写操作但是不影响读操作。
+	*/
+	/**
+	__asm__ __volatile__("hlt"); "__asm__"表示后面的代码为内嵌汇编，"asm"是"__asm__"的别名。"__volatile__"表示编译器不要优化代码，后面的指令 保留原样，"volatile"是它的别名。括号里面是汇编指令。
+	*/
 	temp = (uint32_t)offset;
 	imm = imm + (temp << 16);
 	Debug::debugItem("sendBuffer = %lx, receiveBuffer = %lx, remoteRecvBuffer = %lx, ReceiveSize = %d",
