@@ -10,6 +10,7 @@
 #include "global.h"
 #include "filesystem.hpp"
 #include "TxManager.hpp"
+#include "timer.hpp"
 
 using namespace std;
 
@@ -35,6 +36,7 @@ private:
 	int cqSize;
 	Thread2ID th2id;
 	vector<RPCTask*> tasks;
+	Timer *timer;
 	bool UnlockWait;
 	void Worker(int id);
 	void ProcessRequest(GeneralSendBuffer *send, uint16_t NodeID, uint16_t offset);

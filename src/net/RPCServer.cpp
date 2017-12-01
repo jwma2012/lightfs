@@ -3,6 +3,7 @@
 RPCServer::RPCServer(int _cqSize) :cqSize(_cqSize) {
 	mm = 0;
 	UnlockWait = false;
+	timer = new Timer();
 	conf = new Configuration();
 	mem = new MemoryManager(mm, conf->getServerCount(), 2);
 	mm = mem->getDmfsBaseAddress();
@@ -45,6 +46,7 @@ RPCServer::~RPCServer() {
 	delete wk;
 	delete socket;
 	delete tx;
+	delete timer;
 	Debug::notifyInfo("RPCServer is closed successfully.");
 }
 
