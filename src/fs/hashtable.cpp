@@ -17,7 +17,7 @@ void HashTable::getAddressHash(const char *buf, uint64_t len, AddressHash *hashA
 {
     uint64_t sha256_buf[4];
     // SHA256 sha256;
-    SHA256 sha256;
+    SHA256 sha256; //来自cryptopp库的sha256算法
     sha256.CalculateDigest((byte *)sha256_buf, (const byte *)buf, len);
     // SHA256_CTX ctx;                     /* Context. */
     // sha256_init(&ctx);                  /* Initialize SHA-256 context. */
@@ -49,9 +49,9 @@ void HashTable::getUniqueHash(const char *buf, uint64_t len, UniqueHash *hashUni
     // sha256_final(&ctx, (BYTE *)hashUnique); /* Finalize SHA-256 context. */
 }
 
-/* Get a chained item. Check unique hash to judge if chained item is right or not. 
+/* Get a chained item. Check unique hash to judge if chained item is right or not.
    @param   path        Path.
-   @param   indexMeta   Buffer of meta index. 
+   @param   indexMeta   Buffer of meta index.
    @param   isDirectory Buffer to judge if item is directory or not.
    @return              If item does not exist or other error occurs, then return false. Otherwise return true. */
 bool HashTable::get(const char *path, uint64_t *indexMeta, bool *isDirectory)
@@ -97,9 +97,9 @@ bool HashTable::get(const char *path, uint64_t *indexMeta, bool *isDirectory)
     }
 }
 
-/* Get a chained item by hash. Check unique hash to judge if chained item is right or not. 
+/* Get a chained item by hash. Check unique hash to judge if chained item is right or not.
    @param   hashUnique  Unique hash.
-   @param   indexMeta   Buffer of meta index. 
+   @param   indexMeta   Buffer of meta index.
    @param   isDirectory Buffer to judge if item is directory or not.
    @return              If item does not exist or other error occurs, then return false. Otherwise return true. */
 bool HashTable::get(UniqueHash *hashUnique, uint64_t *indexMeta, bool *isDirectory)
@@ -148,9 +148,9 @@ bool HashTable::get(UniqueHash *hashUnique, uint64_t *indexMeta, bool *isDirecto
     }
 }
 
-/* Put a chained item. If item has already existed, old meta index will be replaced by the new one. 
+/* Put a chained item. If item has already existed, old meta index will be replaced by the new one.
    @param   path        Path.
-   @param   indexMeta   Meta index to put in. 
+   @param   indexMeta   Meta index to put in.
    @param   isDirectory Judge if item is directory.
    @return              If error occurs return false, otherwise return true. */
 bool HashTable::put(const char *path, uint64_t indexMeta, bool isDirectory)
@@ -175,7 +175,7 @@ bool HashTable::put(const char *path, uint64_t indexMeta, bool isDirectory)
                     FreeBit *currentFreeBit = headFreeBit; /* Get current free bit. */
                     headFreeBit = (FreeBit *)(headFreeBit->nextFreeBit); /* Move current free bit out of free bit chain. */
                     free(currentFreeBit); /* Release current free bit as used. */
-                    if (bitmapChainedItems->set(index) == false) { /* Occupy the position first. Need not to roll back. */ 
+                    if (bitmapChainedItems->set(index) == false) { /* Occupy the position first. Need not to roll back. */
                         result = false; /* Fail due to bitmap set error. */
                     } else {
                         itemsChained[index].indexNext = 0; /* Next item does not exist. */
@@ -217,7 +217,7 @@ bool HashTable::put(const char *path, uint64_t indexMeta, bool isDirectory)
                         FreeBit *currentFreeBit = headFreeBit; /* Get current free bit. */
                         headFreeBit = (FreeBit *)(headFreeBit->nextFreeBit); /* Move current free bit out of free bit chain. */
                         free(currentFreeBit); /* Release current free bit as used. */
-                        if (bitmapChainedItems->set(index) == false) { /* Occupy the position first. Need not to roll back. */ 
+                        if (bitmapChainedItems->set(index) == false) { /* Occupy the position first. Need not to roll back. */
                             result = false; /* Fail due to bitmap set error. */
                         } else {
                             itemsChained[index].indexNext = 0; /* Next item does not exist. */
@@ -238,9 +238,9 @@ bool HashTable::put(const char *path, uint64_t indexMeta, bool isDirectory)
     }
 }
 
-/* Put a chained item by hash. If item has already existed, old meta index will be replaced by the new one. 
+/* Put a chained item by hash. If item has already existed, old meta index will be replaced by the new one.
    @param   hashUnique  Unique hash.
-   @param   indexMeta   Meta index to put in. 
+   @param   indexMeta   Meta index to put in.
    @param   isDirectory Judge if item is directory.
    @return              If error occurs return false, otherwise return true. */
 bool HashTable::put(UniqueHash *hashUnique, uint64_t indexMeta, bool isDirectory)
@@ -265,7 +265,7 @@ bool HashTable::put(UniqueHash *hashUnique, uint64_t indexMeta, bool isDirectory
                     FreeBit *currentFreeBit = headFreeBit; /* Get current free bit. */
                     headFreeBit = (FreeBit *)(headFreeBit->nextFreeBit); /* Move current free bit out of free bit chain. */
                     free(currentFreeBit); /* Release current free bit as used. */
-                    if (bitmapChainedItems->set(index) == false) { /* Occupy the position first. Need not to roll back. */ 
+                    if (bitmapChainedItems->set(index) == false) { /* Occupy the position first. Need not to roll back. */
                         result = false; /* Fail due to bitmap set error. */
                     } else {
                         // Debug::debugItem("Index = %d", index);
@@ -308,7 +308,7 @@ bool HashTable::put(UniqueHash *hashUnique, uint64_t indexMeta, bool isDirectory
                         FreeBit *currentFreeBit = headFreeBit; /* Get current free bit. */
                         headFreeBit = (FreeBit *)(headFreeBit->nextFreeBit); /* Move current free bit out of free bit chain. */
                         free(currentFreeBit); /* Release current free bit as used. */
-                        if (bitmapChainedItems->set(index) == false) { /* Occupy the position first. Need not to roll back. */ 
+                        if (bitmapChainedItems->set(index) == false) { /* Occupy the position first. Need not to roll back. */
                             result = false; /* Fail due to bitmap set error. */
                         } else {
                             itemsChained[index].indexNext = 0; /* Next item does not exist. */
@@ -513,7 +513,7 @@ uint64_t HashTable::getMaxLengthOfChain()
     return max;                         /* Return max length of chain. */
 }
 
-/* Constructor of hash table. 
+/* Constructor of hash table.
    @param   buffer          Buffer of whole table.
    @param   count           Max count of chained items. Can be divided by 8. No check here. */
 HashTable::HashTable(char *buffer, uint64_t count)

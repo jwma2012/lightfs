@@ -643,6 +643,8 @@ int RdmaSocket::SocketConnect(uint16_t NodeID) {
 	if ((sock = socket(PF_INET, SOCK_STREAM, 0)) < 0) {
 		Debug::notifyError("Socket Creation Failed");
 		return -1;
+
+
 	}
 	int ret = setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, (const char*)&timeout, sizeof(timeout));
 	if (ret < 0)

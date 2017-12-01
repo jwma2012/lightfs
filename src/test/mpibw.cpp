@@ -12,6 +12,7 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #define BUFFER_SIZE 0x1000000
+//约1MB
 int myid, file_seq;
 int numprocs;
 nrfs fs;
@@ -147,7 +148,9 @@ int main(int argc, char **argv)
 	int op_time = atoi(argv[2]);
 	MPI_Init( &argc, &argv);
 	MPI_Comm_rank( MPI_COMM_WORLD, &myid );
+	printf("myid=%d", myid);
 	MPI_Comm_size( MPI_COMM_WORLD, &numprocs );
+	printf("numprocs=%d", numprocs);
 	file_seq = myid;
 	MPI_Barrier ( MPI_COMM_WORLD );
 

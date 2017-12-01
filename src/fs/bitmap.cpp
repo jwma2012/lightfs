@@ -56,7 +56,7 @@ bool Bitmap::clear(uint64_t pos)
         uint64_t index = pos / 8;       /* Index of byte array. */
         uint64_t offset = pos % 8;      /* Offset in one byte. */
         if ((bytes[index] & (1 << (7 - offset))) != 0) { /* Judge if bit is set. */
-            bytes[index] &= ~(1 << (7 - offset)); /* Clear bit in position. */
+            bytes[index] &= ~(1 << (7 - offset)); /* Clear bit in position. */ //清零，先求反在与其与
             varCountFree++;             /* Count of free bits increases. */
         } else
             ;                           /* Do nothing. */

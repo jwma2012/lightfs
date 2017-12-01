@@ -25,6 +25,7 @@ typedef struct {
     char logData[4086];
     bool commit;
 } __attribute__((packed)) LocalLogEntry;
+//__attribute__((packed))表示不填充
 
 class TxManager {
 private:

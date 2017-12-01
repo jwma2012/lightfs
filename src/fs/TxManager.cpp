@@ -2,8 +2,9 @@
 
 using namespace std;
 
-TxManager::TxManager(uint64_t _LocalLogAddress, uint64_t _DistributedLogAddress) 
+TxManager::TxManager(uint64_t _LocalLogAddress, uint64_t _DistributedLogAddress)
 : LocalLogAddress(_LocalLogAddress), DistributedLogAddress(_DistributedLogAddress){
+	//将分布式和本地事务转化到一起
 	LocalLogIndex = 0;
 	DistributedLogIndex = 0;
 }
@@ -16,6 +17,7 @@ void TxManager::FlushData(uint64_t address, uint64_t size) {
 	for (i = 0; i < size; i += CACHELINE_SIZE) {
 		_mm_clflush((void *)(address + i));
 	}
+	//从cpu缓存刷到内存
 }
 
 uint64_t TxManager::TxLocalBegin() {
