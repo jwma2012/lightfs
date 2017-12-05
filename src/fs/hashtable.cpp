@@ -133,6 +133,7 @@ bool HashTable::get(UniqueHash *hashUnique, uint64_t *indexMeta, bool *isDirecto
                         break;          /* Jump out. */
                     } else {
                         indexCurrent = itemsChained[indexCurrent].indexNext; /* Move to next chained item. */
+                        //相同hash值的在该item下继续寻找
                     }
                 } while (indexCurrent != 0); /* If current item is over last chained item then jump out. */
                 if (found == true) {

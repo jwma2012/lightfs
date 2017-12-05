@@ -152,6 +152,7 @@ void do_ls()
 	nrfsfilelist list;
 	uint32_t i;
 	nrfsListDirectory(fs, path, &list);
+
 	for(i = 0; i < list.count; i++)
 	{
 		if(list.tuple[i].isDirectories == 0) /* file */

@@ -3,7 +3,6 @@
 RPCServer::RPCServer(int _cqSize) :cqSize(_cqSize) {
 	mm = 0;
 	UnlockWait = false;
-	timer = new Timer();
 	conf = new Configuration();
 	mem = new MemoryManager(mm, conf->getServerCount(), 2);
 	mm = mem->getDmfsBaseAddress();
@@ -30,8 +29,10 @@ RPCServer::RPCServer(int _cqSize) :cqSize(_cqSize) {
    @param   countBlock          Max count of blocks.
    @param   countNode           Max count of nodes.
    @param   hashLocalNode       Local node hash. From 1 to countNode. */
-
+	//timer->Start("root initialize");
 	fs->rootInitialize(socket->getNodeID());
+	//timer->Record("root initialize");
+
 	wk = new thread[cqSize]();
 	for (int i = 0; i < cqSize; i++)
 		wk[i] = thread(&RPCServer::Worker, this, i);
@@ -46,7 +47,6 @@ RPCServer::~RPCServer() {
 	delete wk;
 	delete socket;
 	delete tx;
-	delete timer;
 	Debug::notifyInfo("RPCServer is closed successfully.");
 }
 
@@ -100,6 +100,7 @@ void RPCServer::RequestPoller(int id) {
 		}*/
 		return;
 	} else if (wc[0].opcode == IBV_WC_RECV_RDMA_WITH_IMM) {
+		Debug::startTimer("get request");
 		NodeID = wc[0].imm_data >> 20;
 		if (NodeID == 0XFFF) {
 			/* Unlock request, process it directly. */
@@ -107,7 +108,7 @@ void RPCServer::RequestPoller(int id) {
 			// fs->unlockWriteHashItem(0, 0, hashAddress);
 			return;
 		}
-		NodeID = (uint16_t)(wc[0].imm_data << 16 >> 16);
+		NodeID = (uint16_t)(wc[0].imm_data << 16 >> 16);//滤掉负数？
 		offset = (uint16_t)(wc[0].imm_data >> 16);
 		Debug::debugItem("NodeID = %d, offset = %d", NodeID, offset);
 		count += 1;
@@ -149,6 +150,7 @@ void RPCServer::RequestPoller(int id) {
 				// 	// printf("process docommit end.");
 				// 	return;
 				// }
+				Debug::endTimer("get request");
 				ProcessRequest(send, NodeID, offset);
 				// printf("id = %d,end\n", id);
 			}
@@ -168,6 +170,7 @@ void RPCServer::ProcessQueueRequest() {
 }
 
 void RPCServer::ProcessRequest(GeneralSendBuffer *send, uint16_t NodeID, uint16_t offset) {
+	Debug::startTimer("Process request");
 	char receiveBuffer[CLIENT_MESSAGE_SIZE];
 	uint64_t bufferRecv = (uint64_t)send;
 	GeneralReceiveBuffer *recv = (GeneralReceiveBuffer*)receiveBuffer;
@@ -208,9 +211,9 @@ void RPCServer::ProcessRequest(GeneralSendBuffer *send, uint16_t NodeID, uint16_
     		socket->RdmaRead(NodeID, mem->getDataAddress(), 2 * 4096, bufferSend->size, 1); // FIX ME.
     		while (*value == 0);
     	}
-	Debug::debugItem("Copy Reply Data, size = %d.", size);
+		Debug::debugItem("Copy Reply Data, size = %d.", size);
     	memcpy((void *)send, receiveBuffer, size);
-	Debug::debugItem("Select Buffer.");
+		Debug::debugItem("Select Buffer.");
     	if (NodeID > 0 && NodeID <= ServerCount) {
 			/* Recv Message From Other Server. */
 			bufferRecv = bufferRecv - mm;
@@ -219,9 +222,12 @@ void RPCServer::ProcessRequest(GeneralSendBuffer *send, uint16_t NodeID, uint16_
 			bufferRecv = 0;
 		}
 		Debug::debugItem("send = %lx, recv = %lx", send, bufferRecv);
-    		socket->_RdmaBatchWrite(NodeID, (uint64_t)send, bufferRecv, size, 0, 1);
+		Debug::endTimer("Process request");
+		Debug::startTimer("send response");
+		socket->_RdmaBatchWrite(NodeID, (uint64_t)send, bufferRecv, size, 0, 1);
+		Debug::endTimer("send response");
 		// socket->_RdmaBatchReceive(NodeID, mm, 0, 2);
-		socket->RdmaReceive(NodeID, mm + NodeID * 4096, 0);
+		//socket->RdmaReceive(NodeID, mm + NodeID * 4096, 0);  //由我暂时注释掉
 		// printf("process end\n");
     }
 }

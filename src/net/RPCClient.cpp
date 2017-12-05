@@ -35,6 +35,7 @@ Configuration* RPCClient::getConfInstance() {
 }
 
 bool RPCClient::RdmaCall(uint16_t DesNodeID, char *bufferSend, uint64_t lengthSend, char *bufferReceive, uint64_t lengthReceive) {
+	Debug::startTimer("rdma call");
 	uint32_t ID = __sync_fetch_and_add( &taskID, 1 ), temp;
 	uint64_t sendBuffer, receiveBuffer, remoteRecvBuffer;
 	uint16_t offset = 0;
@@ -48,7 +49,7 @@ bool RPCClient::RdmaCall(uint16_t DesNodeID, char *bufferSend, uint64_t lengthSe
 	send->sizeReceiveBuffer = lengthReceive;
 	if (isServer) {
 		offset = mem->getServerSendAddress(DesNodeID, &sendBuffer);
-		// printf("offset = %d\n", offset);
+		printf("[RdmaCall] server offset = %d\n", offset);
 		receiveBuffer = mem->getServerRecvAddress(socket->getNodeID(), offset);
 		remoteRecvBuffer = receiveBuffer - mm;
 	} else {
@@ -84,6 +85,8 @@ bool RPCClient::RdmaCall(uint16_t DesNodeID, char *bufferSend, uint64_t lengthSe
 	if (isServer) {
 		while (recv->message == MESSAGE_INVALID || recv->message != MESSAGE_RESPONSE)
 			;
+		//server遇到不合法的消息就死循环？
+
 	} else {
 		// gettimeofday(&startt,NULL);
 		while (recv->message != MESSAGE_RESPONSE) {
@@ -102,6 +105,7 @@ bool RPCClient::RdmaCall(uint16_t DesNodeID, char *bufferSend, uint64_t lengthSe
 		}
 	}
 	memcpy((void*)bufferReceive, (void *)receiveBuffer, lengthReceive);
+	Debug::endTimer("rdma call");
 	return true;
 }
 

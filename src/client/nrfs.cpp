@@ -21,7 +21,7 @@ uint64_t WriteTime1 = 0, WriteTime2 = 0, WriteTime3 = 0, WriteTime4 = 0, ReadTim
 uint16_t get_node_id_by_path(char* path)
 {
 	UniqueHash hashUnique;
-	HashTable::getUniqueHash(path, strlen(path), &hashUnique);
+	HashTable::getUniqueHash(path, strlen(path), &hashUnique);//算出一个256位的值
 	return ((hashUnique.value[3] % client->getConfInstance()->getServerCount()) + 1);
 }
 
@@ -41,10 +41,12 @@ void correct(const char *old_path, char *new_path)
 	for (i = 0; i < len; i++) {
 		if ((old_path[i] == '/') && (old_path[i + 1] == '/'))
 			continue;
+        /*滤掉dir//a.txt 中的双斜线之一，变为dir/a.txt,去掉的是前面那一个 */
 		new_path[count++] = old_path[i];
 	}
 	if (new_path[count - 1] == '/') {
 		new_path[count - 1] = '\0';
+        //去掉路径里最后的一个/，即dir1/dir2/变为dir1/dir2
 	} else {
 		new_path[count] = '\0';
 	}
@@ -53,6 +55,7 @@ void correct(const char *old_path, char *new_path)
 		new_path[0] = '/';
 		new_path[1] = '\0';
 	}
+    //将可能中枪的"/"还原回来
 }
 
 /* Get parent directory.
@@ -171,6 +174,7 @@ int nrfsDisconnect(nrfs fs)
 	// 	WriteTime1, WriteTime2, WriteTime3, WriteTime4);
 	// Debug::notifyInfo("ReadTime1 =  %d, ReadTime2  = %d, ReadTime3 = %d, ReadTime4 = %d\n",
 	// 	ReadTime1, ReadTime2, ReadTime3, ReadTime4);
+    delete client; //调用client的析构函数
 	return 0;
 }
 
@@ -264,6 +268,7 @@ int nrfsMknodWithMeta(nrfs fs, char *path, FileMeta *metaFile)
 	int result;
 	char *parent = (char *)malloc(strlen(path) + 1);
 	char *name = (char *)malloc(strlen(path) + 1);
+
 	if(getParentDirectory(path, parent) == false)
 		result = 1;
 	else
@@ -832,18 +837,20 @@ int nrfsRename(nrfs fs, const char* _oldpath, const char* _newpath)
 int nrfsListDirectory(nrfs fs, const char* _path, nrfsfilelist *list)
 {
 	Debug::debugTitle("nrfsListDirectory");
+    Debug::startTimer("nrfsListDirectory");
 	GeneralSendBuffer bufferGeneralSend; /* Send buffer. */
     bufferGeneralSend.message = MESSAGE_READDIR; /* Assign message type. */
 
     ReadDirectoryReceiveBuffer bufferReadDirectoryReceive; /* Receive buffer. */
 
-	correct(_path, bufferGeneralSend.path);
+	correct(_path, bufferGeneralSend.path); //进行路径处理,得到dir1/dir2 或者dir1/file1
 
 	uint16_t node_id = get_node_id_by_path(bufferGeneralSend.path);
 
 	sendMessage(node_id, &bufferGeneralSend, sizeof(GeneralSendBuffer),
 					&bufferReadDirectoryReceive, sizeof(ReadDirectoryReceiveBuffer));
 	*list = bufferReadDirectoryReceive.list;
+    Debug::endTimer("nrfsListDirectory");
 	if(bufferReadDirectoryReceive.result)
 		return 0;
 	else

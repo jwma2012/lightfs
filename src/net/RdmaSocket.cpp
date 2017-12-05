@@ -1083,7 +1083,7 @@ bool RdmaSocket::_RdmaBatchWrite(uint16_t NodeID, uint64_t SourceBuffer, uint64_
         send_wr[w_i].wr.rdma.rkey        = peer->rkey;
         peer->counter += 1;
     }
-
+//使用单侧RDMA
     if (ibv_post_send(peer->qp[0], &send_wr[0], &wrBad)) {
         Debug::notifyError("Send with RDMA_WRITE(WITH_IMM) failed.");
         printf("%s\n", strerror(errno));

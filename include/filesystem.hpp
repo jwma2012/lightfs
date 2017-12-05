@@ -17,11 +17,12 @@
 #include "debug.hpp"                    /* Debug class. */
 #include "global.h"                     /* Global header. */
 #include "lock.h"
+//#include "timer.hpp"
 
 /** Classes. **/
 class FileSystem
 {
-private: 
+private:
     Storage *storage;                   /* Storage. */
     NodeHash hashLocalNode;             /* Local node hash. */
     LockService *lock;
@@ -32,15 +33,15 @@ private:
     bool sendMessage(NodeHash hashNode, void *bufferSend, uint64_t lengthSend, /* Send message. */
                      void *bufferReceive, uint64_t lengthReceive);
     void fillFilePositionInformation(uint64_t size, uint64_t offset, file_pos_info *fpi, FileMeta *metaFile); /* Fill file position information for read and write. */
-    
+
 public:
     void rootInitialize(NodeHash LocalNode);
     /* Internal functions. No parameter check. Must be called by message handler or functions in this class. */
-    bool addMetaToDirectory(const char *path, const char *name, bool isDirectory, uint64_t *TxID, 
+    bool addMetaToDirectory(const char *path, const char *name, bool isDirectory, uint64_t *TxID,
         uint64_t *srcBuffer, uint64_t *desBuffer, uint64_t *size, uint64_t *key, uint64_t *offset); /* Internal add meta to directory function. Might cause overhead. */
-    bool removeMetaFromDirectory(const char *path, const char *name, 
+    bool removeMetaFromDirectory(const char *path, const char *name,
         uint64_t *TxID, uint64_t *srcBuffer, uint64_t *desBuffer, uint64_t *size,  uint64_t *key, uint64_t *offset); /* Internal remove meta from directory function. Might cause overhead. */
-    bool updateDirectoryMeta(const char *path, uint64_t TxID, uint64_t srcBuffer, 
+    bool updateDirectoryMeta(const char *path, uint64_t TxID, uint64_t srcBuffer,
         uint64_t desBuffer, uint64_t size, uint64_t key, uint64_t offset);
     bool mknodWithMeta(const char *path, FileMeta *metaFile); /* Make node (file) with file meta. */
     /* External functions. */
@@ -73,8 +74,8 @@ public:
     void unlockReadHashItem(uint64_t key, NodeHash hashNode, AddressHash hashAddressIndex); /* Unlock hash item. */
     void updateRemoteMeta(uint16_t parentNodeID, DirectoryMeta *meta, uint64_t parentMetaAddress, uint64_t parentHashAddress);
     FileSystem(char *buffer, char *bufferBlock, uint64_t countFile, /* Constructor of file system. */
-               uint64_t countDirectory, uint64_t countBlock, 
-               uint64_t countNode, NodeHash hashLocalNode); 
+               uint64_t countDirectory, uint64_t countBlock,
+               uint64_t countNode, NodeHash hashLocalNode);
     ~FileSystem();                      /* Destructor of file system. */
 };
 

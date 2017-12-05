@@ -5,7 +5,10 @@
 /** Included files. **/
 #include "filesystem.hpp"
 #include "RPCServer.hpp"
-extern RPCServer *server;
+
+extern RPCServer *server;//它在dmfs.cpp中被声明
+extern Timer *Timer;//它在dmfs.cpp中被声明
+
 bool Dotx = true;
 uint64_t TxLocalBegin() {
     if (!Dotx)
@@ -1161,7 +1164,7 @@ bool FileSystem::mkdir2pc(const char *path)
             }
 
             unlockWriteHashItem(key, hashNode, hashAddress);  /* Unlock hash item. */
-            Debug::debugItem("Stage end.");
+            Debug::debugItem("Stage readdir.");
             return result;              /* Return specific result. */
         } else {                        /* If remote node. */
             return false;
@@ -1177,6 +1180,7 @@ bool FileSystem::readdir(const char *path, nrfsfilelist *list)
 {
     Debug::debugTitle("FileSystem::readdir");
     Debug::debugItem("Stage 1. Entry point. Path: %s.", path);
+    Debug::startTimer("file system readdir Stage 1. Entry point");
     if ((path == NULL) || (list == NULL)) /* Judge if path and list buffer are valid. */
         return false;                   /* Null parameter error. */
     else {
@@ -1185,6 +1189,8 @@ bool FileSystem::readdir(const char *path, nrfsfilelist *list)
         NodeHash hashNode = storage->getNodeHash(&hashUnique); /* Get node hash by unique hash. */
         AddressHash hashAddress = HashTable::getAddressHash(&hashUnique); /* Get address hash by unique hash. */
         if (checkLocal(hashNode) == true) { /* If local node. */
+        /*checkLocal主要是用于服务器判断是否在服务器本地，由于特定的操作已经在客户端做了判断，所以这一步一般是在本地的。
+        */
             bool result;
             uint64_t key = lockReadHashItem(hashNode, hashAddress); /* Lock hash item. */
             {
@@ -1193,7 +1199,9 @@ bool FileSystem::readdir(const char *path, nrfsfilelist *list)
                 if (storage->hashtable->get(&hashUnique, &indexDirectoryMeta, &isDirectory) == false) { /* If path does not exist. */
                     result = false;     /* Fail due to path does not exist. */
                 } else {
+                    Debug::endTimer("file system readdir Stage 1. Entry point");
                     Debug::debugItem("Stage 2. Get meta.");
+                    Debug::startTimer("file system readdir Stage 2. Get meta.");
                     if (isDirectory == false) { /* If file meta. */
                         result = false; /* Fail due to not directory. */
                     } else {
@@ -1203,7 +1211,7 @@ bool FileSystem::readdir(const char *path, nrfsfilelist *list)
                         } else {
                             list->count = metaDirectory.count; /* Assign count of names in directory. */
                             for (uint64_t i = 0; i < metaDirectory.count; i++) {
-                                strcpy(list->tuple[i].names, metaDirectory.tuple[i].names);
+                                strcpy(list->tuple[i].names, metaDirectory.tuple[i].names);//这次拷贝需要放到发送缓冲区，可以是不必要的拷贝
                                 if (metaDirectory.tuple[i].isDirectories == true) {
                                     list->tuple[i].isDirectories = true; /* Mode 1 for directory. */
                                 } else {
@@ -1216,11 +1224,13 @@ bool FileSystem::readdir(const char *path, nrfsfilelist *list)
                 }
             }
             unlockReadHashItem(key, hashNode, hashAddress); /* Unlock hash item. */
+            Debug::endTimer("file system readdir Stage 2. Get meta.");
             Debug::debugItem("Stage end.");
             return result;              /* Return specific result. */
         } else {                        /* If remote node. */
             return false;
         }
+
     }
 }
 

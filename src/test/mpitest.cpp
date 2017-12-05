@@ -1,6 +1,6 @@
 /***
 *
-* 
+*
 *
 ***/
 
@@ -165,7 +165,7 @@ int main(int argc, char **argv)
 	MPI_Comm_size( MPI_COMM_WORLD, &numprocs );
 	/* file system connect */
 	MPI_Barrier ( MPI_COMM_WORLD );
-	fs = nrfsConnect("default", 0, 0); 
+	fs = nrfsConnect("default", 0, 0);
 	MPI_Barrier ( MPI_COMM_WORLD );
 	if(myid == 0)
 	{
@@ -214,9 +214,6 @@ int main(int argc, char **argv)
 	if(myid == 0)
 		printf("file stat\t\t");
 	time_counter(end - start, file_num);
-
-
-
 	MPI_Barrier ( MPI_COMM_WORLD );
 	//usleep(1000000);
 	MPI_Barrier ( MPI_COMM_WORLD );

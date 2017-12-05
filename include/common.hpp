@@ -8,7 +8,7 @@ typedef char* nrfsFile;
 
 #define MAX_MESSAGE_BLOCK_COUNT 10      /* Max count of block index in a message. */
 
-typedef struct 
+typedef struct
 {
 	uint16_t node_id;
 	uint64_t offset;
@@ -43,7 +43,7 @@ struct nrfsfileattr
 /** Classes and structures. **/
 typedef uint64_t NodeHash;              /* Node hash. */
 
-typedef struct 
+typedef struct
 {
 	NodeHash hashNode; /* Node hash array of extent. */
     uint32_t indexExtentStartBlock; /* Index array of start block in an extent. */
@@ -62,12 +62,15 @@ typedef struct {
 	char names[MAX_FILE_NAME_LENGTH];
 	bool isDirectories;
 } DirectoryMetaTuple;
+//sizeof(DirectoryMetaTuple) = 51B
 
 typedef struct                          /* Directory meta structure. */
 {
     uint64_t count;                 /* Count of names. */
     DirectoryMetaTuple tuple[MAX_DIRECTORY_COUNT];
 } DirectoryMeta;
+//size为8+51*60
+//但是实际sizeof(DirectoryMeta)为3072
 
 typedef DirectoryMeta nrfsfilelist;
 

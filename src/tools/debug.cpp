@@ -5,7 +5,12 @@
 /** Included files. **/
 #include "debug.hpp"
 
+#if DEBUG
 #define TRACE_LOG(format, ...) (fprintf(stdout, "#%s(%d)-<%s>#\n"##format, __FILE__, __LINE__, __FUNCTION__, ##__VA_ARGS__))
+#else
+#define TRACE_LOG() ()
+//空宏
+#endif
 
 /** Implemented functions. **/
 /* Print debug title string.
@@ -88,13 +93,14 @@ void Debug::startTimer(const char *timerName)
     struct timezone tz;
     gettimeofday(&tv,&tz);              /* Get start time. */
     if (TIMER == true) {                /* If debug option is set. */
-        //printf("%s is started.\n", timerName);
+        printf("%s is started.\n", timerName);
         Debug::startTime = tv.tv_sec * 1000 * 1000 + tv.tv_usec; /* Convert to milliseconds and save. */
+    //microseconds
     }
 }
 
 /* End timer and display information. */
-void Debug::endTimer()
+void Debug::endTimer(const char *timerName)
 {
     struct timeval tv;
     struct timezone tz;
@@ -102,7 +108,8 @@ void Debug::endTimer()
     long endTime;
     if (TIMER == true) {                /* If debug option is set. */
         endTime = tv.tv_sec * 1000 * 1000 + tv.tv_usec; /* Convert to milliseconds. */
-        printf("Timer is ended. Cost %ld us.\n", (endTime - Debug::startTime));
+    //microseconds
+        printf("%s is ended. Cost %ld us.\n", timerName, (endTime - Debug::startTime));
     }
 }
 

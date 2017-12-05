@@ -12,10 +12,18 @@
 
 /** Defninitions. **/
 #define MAX_FORMAT_LEN 255
+/*
 #define DEBUG true
 #define TITLE true
 #define TIMER true
 #define CUR  true
+*/
+
+#define DEBUG false
+#define TITLE false
+#define TIMER true
+#define CUR  false
+
 /** Classes. **/
 class Debug
 {
@@ -29,7 +37,7 @@ public:
     static void notifyInfo(const char *format, ...); /* Print normal notification. */
     static void notifyError(const char *format, ...); /* Print error information. */
     static void startTimer(const char*); /* Start timer and display information. */
-    static void endTimer(); /* End timer and display information. */
+    static void endTimer(const char*); /* End timer and display information. */
 };
 
 /** Redundance check. **/
