@@ -73,6 +73,7 @@ uint64_t MemoryManager::getServerSendAddress(uint16_t NodeID, uint64_t *buffer) 
         (NodeID - 1) * SERVER_MASSAGE_SIZE * SERVER_MASSAGE_NUM
         + offset * SERVER_MASSAGE_SIZE);
     //显然需要满足offset < SERVER_MASSAGE_NUM = 8
+    //所以猜测不能超过8个线程
     return offset;
 }
 

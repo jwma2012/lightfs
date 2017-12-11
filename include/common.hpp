@@ -19,6 +19,7 @@ struct file_pos_info
 {
 	uint32_t len;
 	file_pos_tuple tuple[MAX_MESSAGE_BLOCK_COUNT];
+    //即一个文件最多10的分块
 };
 
 /* getattr */
@@ -57,6 +58,7 @@ typedef struct                          /* File meta structure. */
     uint64_t size;                  /* Size of extents. */
     FileMetaTuple tuple[MAX_FILE_EXTENT_COUNT];
 } FileMeta;
+//sizeof(FileMeta) = 344B
 
 typedef struct {
 	char names[MAX_FILE_NAME_LENGTH];

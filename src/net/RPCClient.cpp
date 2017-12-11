@@ -79,18 +79,21 @@ bool RPCClient::RdmaCall(uint16_t DesNodeID, char *bufferSend, uint64_t lengthSe
 		|| send->message == MESSAGE_EXTENTREADEND) {
 		// socket->_RdmaBatchWrite(DesNodeID, sendBuffer, remoteRecvBuffer, lengthSend, imm, 1);
 		// socket->PollCompletion(DesNodeID, 1, &wc);
+		Debug::endTimer("rdma call");
 		return true;
 	}
 	socket->_RdmaBatchWrite(DesNodeID, sendBuffer, remoteRecvBuffer, lengthSend, imm, 1);
 	if (isServer) {
 		while (recv->message == MESSAGE_INVALID || recv->message != MESSAGE_RESPONSE)
-			;
+			printf("server...\n");
 		//server遇到不合法的消息就死循环？
+		//应该是死循环
 
 	} else {
 		// gettimeofday(&startt,NULL);
 		while (recv->message != MESSAGE_RESPONSE) {
-			;
+			printf("client...\n");
+			//这个相当于在轮询结果
 			/* gettimeofday(&endd,NULL);
 			diff = 1000000 * (endd.tv_sec - startt.tv_sec) + endd.tv_usec - startt.tv_usec;
 			if (diff > 1000000) {

@@ -78,10 +78,13 @@ void FileSystem::updateRemoteMeta(uint16_t parentNodeID, DirectoryMeta *meta, ui
     uint64_t size = sizeof(DirectoryMeta) - sizeof(DirectoryMetaTuple) * (MAX_DIRECTORY_COUNT - meta->count);
     //这是一个正数，
 	memcpy((void *)SendBuffer, (void *)meta, size);
+    //RemoteBuffer由之前的一次RDMACall得到
+    //SendBuffer由本机NodeId和tid得到，现在的sendbuff是存的meta的信息，需要更新到远程
     server->getRdmaSocketInstance()->RdmaWrite(parentNodeID, SendBuffer, RemoteBuffer, size, -1, 1);
 	server->getRdmaSocketInstance()->RdmaRead(parentNodeID, SendBuffer, RemoteBuffer, size, 1);
 	/* Data will be written to the remote address, and lock will be released with the assist of imm data. */
 	/* WRITE READ will be send after that, flushing remote data. */
+    //RdmaRead相当于确认并释放锁
 }
 
 void RdmaCall(uint16_t NodeID, char *bufferSend, uint64_t lengthSend, char *bufferReceive, uint64_t lengthReceive) {
@@ -480,6 +483,7 @@ bool FileSystem::addMetaToDirectory(const char *path, const char *name, bool isD
         Debug::debugItem("Stage end.");
         return result;                  /* Return specific result. */
     } else {                            /* If remote node. */
+    //这是不必要的，因为客户端确定了发送到的节点一定能处理这个消息
         AddMetaToDirectorySendBuffer bufferAddMetaToDirectorySend; /* Send buffer. */
 	    bufferAddMetaToDirectorySend.message = MESSAGE_ADDMETATODIRECTORY; /* Assign message type. */
 	    strcpy(bufferAddMetaToDirectorySend.path, path);  /* Assign path. */
@@ -962,6 +966,7 @@ bool FileSystem::access(const char *path)
                 if (storage->hashtable->get(&hashUnique, &indexMeta, &isDirectory) == false) { /* If path does not exist. */
                     result = false;     /* Fail due to path does not exist. */
                 } else {
+                    //indexMeta没有返回上层
                     result = true;      /* Succeed. Do not need to check parent. */
                 }
             }
@@ -1605,11 +1610,14 @@ bool FileSystem::extentWrite(const char *path, uint64_t size, uint64_t offset, f
                         if (storage->tableFileMeta->get(indexFileMeta, metaFile) == false) {
                             result = false; /* Fail due to get file meta error. */
                         } else {
-                            if (((0xFFFFFFFFFFFFFFFF - offset) < size) || (size == 0)) {
+                            if (((0xFFFFFFFFFFFFFFFF - offset) < size) || (size == 0)) {//0xFFFFFFFFFFFFFFFF有16位，即为2的64次方减1，
                                 result = false; /* Fail due to offset + size will cause overflow or size is zero. */
                             } else {
                                 Debug::debugItem("Stage 3.");
                                 if ((metaFile->size == 0) || ((offset + size - 1) / BLOCK_SIZE > (metaFile->size - 1) / BLOCK_SIZE)) { /* Judge if new blocks need to be created. */
+                                /*(offset + size - 1) / BLOCK_SIZE > (metaFile->size - 1) / BLOCK_SIZE)是什么意思？
+offset + size > metaFile->size说明比原来文件大，(offset + size - 1) / BLOCK_SIZE > (metaFile->size - 1) / BLOCK_SIZE)说明需要新的block
+                                */
                                     uint64_t countExtraBlock; /* Count of extra blocks. At least 1. */
                                     int64_t boundCurrentExtraExtent; /* Bound of current extra extent. */
                                     /* Consider 0 size file. */
@@ -1618,6 +1626,7 @@ bool FileSystem::extentWrite(const char *path, uint64_t size, uint64_t offset, f
                                         boundCurrentExtraExtent = -1; /* Bound current extra extent start from 0. */
                                         countExtraBlock = (offset + size - 1) / BLOCK_SIZE + 1;
                                         Debug::debugItem("Stage 4-1, countExtraBlock = %d, BLOCK_SIZE = %d", countExtraBlock, BLOCK_SIZE);
+                                        //BLOCK_SIZE = 1MB
                                     } else {
                                         boundCurrentExtraExtent = (int64_t)metaFile->count - 1;  /* Bound current extra extent start from metaFile->count. */
                                         countExtraBlock = (offset + size - 1) / BLOCK_SIZE - (metaFile->size - 1) / BLOCK_SIZE;
@@ -1668,7 +1677,8 @@ bool FileSystem::extentWrite(const char *path, uint64_t size, uint64_t offset, f
                                         fillFilePositionInformation(size, offset, fpi, metaFile); /* Fill file position information. */
                                         result = true;
                                     }
-                                } else {
+                                }  //end of if ((metaFile->size == 0) || ((offset + size - 1) / BLOCK_SIZE > (metaFile->size - 1) / BLOCK_SIZE))
+                                else {
                                     metaFile->size = (offset + size) > metaFile->size ? (offset + size) : metaFile->size; /* Update size of file in meta. */
                                     fillFilePositionInformation(size, offset, fpi, metaFile); /* Fill file position information. */
                                      /*printf("(int)(fpi->len) = %d, (int)(fpi->offset[0]) = %d, (int)(fpi->size[0]) = %d\n",
@@ -2008,6 +2018,7 @@ bool FileSystem::removecd(const char *path, FileMeta *metaFile)
 			                                metaModifiedDirectory.tuple[indexModifiedNames].isDirectories = parentMeta.tuple[i].isDirectories; /* Add directory state. */
 			                                indexModifiedNames++;
 			                            }
+                                        /*相同就不处理，不同就拷贝，相当于在新的里面删掉了改目录的元数据*/
 			                        }
 			                        metaModifiedDirectory.count = indexModifiedNames;
                                     /* Apply updated data to local log. */
@@ -2032,6 +2043,7 @@ bool FileSystem::removecd(const char *path, FileMeta *metaFile)
                             }
                         }
                     } else {
+                        //如果删除的是文件
                         if (storage->tableFileMeta->get(indexMeta, metaFile) == false) {
                             result = false; /* Fail due to get file meta error. */
                         } else {
@@ -2063,6 +2075,7 @@ bool FileSystem::removecd(const char *path, FileMeta *metaFile)
                         		/* Only allocate momery, write to log first. */
 								bool resultFor = true;
 	                            Debug::debugItem("Stage 3. Remove blocks.");
+                                //移除本地的数据block
 	                            for (uint64_t i = 0; (i < metaFile->count) && (metaFile->tuple[i].hashNode == hashNode); i++) {
 	                                for (int j = (int)(metaFile->tuple[i].countExtentBlock) - 1; j >= 0; j--) {
 	                                    if (storage->tableBlock->remove(metaFile->tuple[i].indexExtentStartBlock + j) == false) {
@@ -2301,6 +2314,8 @@ bool FileSystem::rename(const char *pathOld, const char *pathNew)
 	                            result = false; /* Fail due to get file meta error. */
 	                        } else{
                                 updateDirectoryMeta(parent, RemoteTxID, srcBuffer, desBuffer, size, remotekey, offset);
+                                //十分不明白这一句有什么用，removeMetaFromDirectory已经从父目录元数据里删除该文件的元数据。
+                                //难道是为了释放锁与do commit？
 	                            Debug::debugItem("Stage 4. Remove file meta.");
 	                            if (storage->tableFileMeta->remove(indexFileMeta) == false) {
 	                                result = false; /* Fail due to remove error. */
@@ -2339,6 +2354,7 @@ void FileSystem::rootInitialize(NodeHash LocalNode)
     NodeHash hashNode = storage->getNodeHash(&hashUnique); /* Get node hash. */
     Debug::debugItem("root node: %d", (int)hashNode);
     if (hashNode == this->hashLocalNode) { /* Root directory is here. */
+    //root node的hash值一定是1，主节点？
         Debug::notifyInfo("Initialize root directory.");
         DirectoryMeta metaDirectory;
         metaDirectory.count = 0;    /* Initialize count of files in root directory is 0. */

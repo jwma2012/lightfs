@@ -189,7 +189,7 @@ int nrfsAddMetaToDirectory(nrfs fs, char* parent, char* name, bool isDirectory)
     bufferAddMetaToDirectorySend.isDirectory = isDirectory; /* Assign state of directory. */
 
     uint16_t hashNode = get_node_id_by_path(parent);
-
+    //hash得到的nodeID与发送到的nodeID一样，所以在远端应该不需要校验是否本地id。
     UpdataDirectoryMetaReceiveBuffer bufferGeneralReceive; /* Receive buffer. */
 
     if (sendMessage(hashNode,
@@ -332,7 +332,7 @@ nrfsFile nrfsOpenFile(nrfs fs, const char* _path, int flags)
 	int result;
 	result = nrfsAccess(fs, _path);
 	if((flags & O_CREAT) && result)	/* Access falied and no creation */
-	{
+	{//result = 1
 		result = nrfsMknod(fs, _path);
 	}
 	if(result == 0)
@@ -792,7 +792,7 @@ int nrfsRename(nrfs fs, const char* _oldpath, const char* _newpath)
 	correct(_newpath, bufferRenameSend.pathNew);
 
 	FileMeta meta;
-	if(nrfsGetAttribute(fs, bufferRenameSend.pathOld, &meta))
+	if(nrfsGetAttribute(fs, bufferRenameSend.pathOld, &meta)) //返回值是-1和0两种
 		result = 1;
 	else
 	{
@@ -824,7 +824,7 @@ int nrfsRename(nrfs fs, const char* _oldpath, const char* _newpath)
 			}
 		}
 	}
-	return result;
+	return result;//所以这里1表示异常，0位为正常？
 }
 
 /**
