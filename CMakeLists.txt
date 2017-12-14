@@ -1,3 +1,4 @@
+c.make
 cmake_minimum_required(VERSION 2.8.5 FATAL_ERROR)
 project(dmfs)
 
@@ -43,7 +44,9 @@ set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -L/usr/local/lib/libfuse.so")
 set(CLIENT_BASE ${PROJECT_SOURCE_DIR}/client)
 set(CNET_SRC ${PROJECT_SOURCE_DIR}/src/net)
 set(CLIB_SRC ${PROJECT_SOURCE_DIR}/src/client)
-file(GLOB_RECURSE NRFS_LIB_SRC ${CNET_SRC}/*.cpp ${CLIB_SRC}/*.cpp ${TOOLS_SRC}/*.cpp ${FS_SRC}/*.cpp)
+set(PORT_SRC ${PROJECT_SOURCE_DIR}/src/port)
+set(UTIl_SRC ${PROJECT_SOURCE_DIR}/src/util)
+file(GLOB_RECURSE NRFS_LIB_SRC ${CNET_SRC}/*.cpp ${CLIB_SRC}/*.cpp ${TOOLS_SRC}/*.cpp ${FS_SRC}/*.cpp ${PORT_SRC}/*.cc ${UTIL_SRC}/*.cc)
 add_library(nrfsc SHARED ${NRFS_LIB_SRC})
 add_library(jninrfs SHARED ${NRFS_LIB_SRC} ${CLIB_SRC}/JavaApiImpl.cpp)
 # Build client test
