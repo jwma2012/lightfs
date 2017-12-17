@@ -1,6 +1,6 @@
 /****************************************************************
 *
-* 
+*
 *
 * g++ -o nrfs nrfs.cpp test.cpp -std=c++14 -lpthread
 *
@@ -49,31 +49,31 @@ int nrfsDisconnect(nrfs fs);
 nrfsFile nrfsOpenFile(nrfs fs, const char* path, int flags);
 
 /**
-*nrfsCloseFile - Close an open file. 
+*nrfsCloseFile - Close an open file.
 * @param fs The configured filesystem handle.
 * @param path The full path to the file.
-* @return Returns 0 on success, -1 on error.  
+* @return Returns 0 on success, -1 on error.
 **/
 int nrfsCloseFile(nrfs fs, nrfsFile file);
 
 /**
-*nrfsMknod - create a file. 
+*nrfsMknod - create a file.
 * @param fs The configured filesystem handle.
 * @param path The full path to the file.
-* @return Returns 0 on success, -1 on error.  
+* @return Returns 0 on success, -1 on error.
 **/
 int nrfsMknod(nrfs fs, const char* path);
 
 /**
-*nrfsAccess - access a file. 
+*nrfsAccess - access a file.
 * @param fs The configured filesystem handle.
 * @param path The full path to the file.
-* @return Returns 0 on success, -1 on error.  
+* @return Returns 0 on success, -1 on error.
 **/
 int nrfsAccess(nrfs fs, const char* path);
 
 /**
-*nrfsGetAttribute - Get the attribute of the file. 
+*nrfsGetAttribute - Get the attribute of the file.
 * @param fs The configured filesystem handle.
 * @param path The full path to the file.
 * @return Returns 0 on success, -1 on error.
@@ -85,9 +85,9 @@ int nrfsGetAttribute(nrfs fs, nrfsFile file, FileMeta *attr);
 * @param fs The configured filesystem handle.
 * @param file The file handle.
 * @param buffer The data.
-* @param size The no. of bytes to write. 
-* @param offset The offset of the file where to write. 
-* @return Returns the number of bytes written, -1 on error. 
+* @param size The no. of bytes to write.
+* @param offset The offset of the file where to write.
+* @return Returns the number of bytes written, -1 on error.
 **/
 int nrfsWrite(nrfs fs, nrfsFile file, const void* buffer, uint64_t size, uint64_t offset);
 
@@ -96,39 +96,39 @@ int nrfsWrite(nrfs fs, nrfsFile file, const void* buffer, uint64_t size, uint64_
 * @param fs The configured filesystem handle.
 * @param file The file handle.
 * @param buffer The buffer to copy read bytes into.
-* @param size The no. of bytes to read. 
-* @param offset The offset of the file where to read. 
-* @return Returns the number of bytes actually read, -1 on error. 
+* @param size The no. of bytes to read.
+* @param offset The offset of the file where to read.
+* @return Returns the number of bytes actually read, -1 on error.
 **/
 int nrfsRead(nrfs fs, nrfsFile file, void* buffer, uint64_t size, uint64_t offset);
 
-/** 
+/**
 * nrfsCreateDirectory - Make the given file and all non-existent
 * parents into directories.
 * @param fs The configured filesystem handle.
 * @param path The path of the directory.
-* @return Returns 0 on success, -1 on error. 
+* @return Returns 0 on success, -1 on error.
 */
 int nrfsCreateDirectory(nrfs fs, const char* path);
 
-/** 
+/**
 * nrfsDelete - Delete file.
 * @param fs The configured filesystem handle.
 * @param path The path of the directory.
-* @return Returns 0 on success, -1 on error. 
+* @return Returns 0 on success, -1 on error.
 */
 int nrfsDelete(nrfs fs, const char* path);
 int nrfsFreeBlock(uint16_t node_id, uint64_t startBlock, uint64_t  countBlock);
 /**
-* nrfsRename - Rename file. 
+* nrfsRename - Rename file.
 * @param fs The configured filesystem handle.
-* @param oldPath The path of the source file. 
-* @param newPath The path of the destination file. 
-* @return Returns 0 on success, -1 on error. 
+* @param oldPath The path of the source file.
+* @param newPath The path of the destination file.
+* @return Returns 0 on success, -1 on error.
 */
 int nrfsRename(nrfs fs, const char* oldpath, const char* newpath);
 
-/** 
+/**
 * nrfsListDirectory - Get list of files/directories for a given
 * directory-path.
 * @param fs The configured filesystem handle.

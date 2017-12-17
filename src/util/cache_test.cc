@@ -3,7 +3,7 @@
 #include <vector>
 #include <iostream>
 #include "util/coding.h"
-#include "util/common.hpp"
+#include "common.hpp"
 
 
 //using namespace leveldb;

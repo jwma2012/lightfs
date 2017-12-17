@@ -771,6 +771,7 @@ bool FileSystem::mknodcd(const char *path)
                         Debug::debugItem("Stage 3. Create file meta.");
                         uint64_t indexFileMeta;
                         FileMeta metaFile;
+                        metaFile.isDirMeta = false;
                         metaFile.timeLastModified = time(NULL); /* Set last modified time. */
                         metaFile.count = 0; /* Initialize count of extents as 0. */
                         metaFile.size = 0;
@@ -850,6 +851,7 @@ bool FileSystem::mknod2pc(const char *path)
                         Debug::debugItem("Stage 3. Create file meta.");
                         uint64_t indexFileMeta;
                         FileMeta metaFile;
+                        metaFile.isDirMeta = false;
                         metaFile.timeLastModified = time(NULL); /* Set last modified time. */
                         metaFile.count = 0; /* Initialize count of extents as 0. */
                         metaFile.size = 0;
@@ -1056,6 +1058,7 @@ bool FileSystem::mkdircd(const char *path)
                         Debug::debugItem("Stage 3. Write directory meta.");
                         uint64_t indexDirectoryMeta;
                         DirectoryMeta metaDirectory;
+                        metaDirectory.isDirMeta = true;
                         metaDirectory.count = 0; /* Initialize count of names as 0. */
                         /* Apply updated data to local log. */
                         TxWriteData(LocalTxID, (uint64_t)&parentMeta, (uint64_t)sizeof(DirectoryMeta));
@@ -1135,6 +1138,7 @@ bool FileSystem::mkdir2pc(const char *path)
                         Debug::debugItem("Stage 3. Write directory meta.");
                         uint64_t indexDirectoryMeta;
                         DirectoryMeta metaDirectory;
+                        metaDirectory.isDirMeta = true;
                         metaDirectory.count = 0; /* Initialize count of names as 0. */
                         /* Apply updated data to local log. */
                         TxWriteData(LocalTxID, (uint64_t)&metaDirectory, (uint64_t)sizeof(DirectoryMeta));

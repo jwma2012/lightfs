@@ -7,6 +7,7 @@
 #include "nrfs.h"
 #include "RPCClient.hpp"
 #include "storage.hpp"
+#include "leveldb/cache.h"
 
 using namespace std;
 mutex key_m;
@@ -14,6 +15,9 @@ uint64_t key;
 atomic<bool> isConnected;
 RPCClient *client;
 uint64_t DmfsDataOffset;
+
+static const int kCacheSize = 256;
+Cache* cache;
 
 struct  timeval start1, end1;
 uint64_t diff;
@@ -56,6 +60,38 @@ void correct(const char *old_path, char *new_path)
 		new_path[1] = '\0';
 	}
     //将可能中枪的"/"还原回来
+}
+
+//这个char *转slice的函数是不必要的，因为slice可以通过char *构造
+static std::string EncodeKey(char *path) {
+  std::string result;
+  result.append(path);
+  //std::cout<<"EncodeKey : "<<result<<std::endl;
+  return result;
+}
+
+//get info from cache
+static int DecodeValue(void* v) {
+  bool *pBool = (bool *)v;
+  if (*pBool) {
+    DirectoryMeta *pDirMeta = (DirectoryMeta *)v;
+    for (int i = 0; i < pDirMeta->count; i++) {
+      printf("DecodeValue %d %s\n", i, pDirMeta->tuple[i].names);
+    }
+  }
+  else {
+    FileMeta *pFileMeta = (FileMeta *)v;
+    printf("DecodeValue file size = %ld\n", pFileMeta->size);
+    printf("DecodeValue count = %ld\n", pFileMeta->count);
+  }
+  return 0;
+}
+
+static void Deleter(const Slice& key, void* v) {
+    deleted_keys.push_back(key);
+    printf("Delete %d in cache.\n", key.data());
+    free(v);
+    v = NULL;
 }
 
 /* Get parent directory.
@@ -146,6 +182,7 @@ nrfs nrfsConnect(const char* host, int port, int size)
 	DmfsDataOffset += SERVER_MASSAGE_SIZE * SERVER_MASSAGE_NUM * client->getConfInstance()->getServerCount();
     DmfsDataOffset += METADATA_SIZE;
     printf("FileMetaSize = %ld, DirMetaSize = %ld\n", sizeof(FileMeta), sizeof(DirectoryMeta));
+    cache = NewLRUCache(kCacheSize);
     usleep(100000);
 	return (nrfs)0;
 }
@@ -175,6 +212,7 @@ int nrfsDisconnect(nrfs fs)
 	// Debug::notifyInfo("ReadTime1 =  %d, ReadTime2  = %d, ReadTime3 = %d, ReadTime4 = %d\n",
 	// 	ReadTime1, ReadTime2, ReadTime3, ReadTime4);
     delete client; //调用client的析构函数
+    delete cache;
 	return 0;
 }
 
@@ -261,6 +299,7 @@ int nrfsRemoveMetaFromDirectory(nrfs fs, char* path, char* name)
     return result;
 }
 
+//在nrfsCli中没有被调用
 int nrfsMknodWithMeta(nrfs fs, char *path, FileMeta *metaFile)
 {
 	Debug::debugTitle("nrfsMknodWithMeta");
@@ -363,6 +402,24 @@ int nrfsMknod(nrfs fs, const char* _path)
 
 	correct(_path, sendBuffer.path);
 	uint16_t node_id  = get_node_id_by_path(sendBuffer.path);
+
+    int charge = sizeof(FileMeta);
+    FileMeta *pFileMeta;
+    pFileMeta = (FileMeta *)malloc(sizeof(FileMeta));
+    if (pFileMeta == NULL){
+      printf("1.%s\n", "no free memory");
+      return;
+    }
+    memset(pFileMeta, 0, sizeof(FileMeta));
+    //new file meta
+    pFileMeta->isDirMeta = false;
+    pFileMeta->timeLastModified = time(NULL); /* Set last modified time. */
+    pFileMeta->count = 0; /* Initialize count of extents as 0. */
+    pFileMeta->size = 0;
+    void *value = reinterpret_cast<void *>(pFileMeta);
+    cache->Release(cache->Insert(sendBuffer.path, value, charge,
+                                   &Deleter));
+
 	sendMessage(node_id, &sendBuffer, sizeof(GeneralSendBuffer),
 		&receiveBuffer, sizeof(GeneralReceiveBuffer));
 	if(receiveBuffer.result == false) {
@@ -402,6 +459,15 @@ int nrfsGetAttribute(nrfs fs, nrfsFile _file, FileMeta *attr)
     bufferGeneralSend.message = MESSAGE_GETATTR;
 
     correct((char*)_file, bufferGeneralSend.path);
+    Cache::Handle* handle = cache->Lookup(bufferGeneralSend.path);
+    //int r = (handle == NULL) ? -1 : DecodeValue(cache_->Value(handle));
+    if (handle != NULL) {
+      //cache_->Release(handle);
+        *attr = *(fileMeta *)(cache->Value(handle));  //涉及到了内存拷贝
+        cache->Release(handle);
+        Debug::debugItem("nrfsGetAttribute, in cache, META.size = %d", attr->size);
+        return 0;
+    }
 
     uint16_t node_id = get_node_id_by_path(bufferGeneralSend.path);
 
@@ -434,6 +500,13 @@ int nrfsAccess(nrfs fs, const char* _path)
 	sendBuffer.message = MESSAGE_ACCESS;
 
 	correct(_path, sendBuffer.path);
+    Cache::Handle* handle = cache->Lookup(sendBuffer.path);
+    //int r = (handle == NULL) ? -1 : DecodeValue(cache_->Value(handle));
+    if (handle != NULL) {
+      cache_->Release(handle);
+      return 0;
+    }
+//cache 不命中则继续远程取
 	uint16_t node_id = get_node_id_by_path(sendBuffer.path);
 
 	sendMessage(node_id, &sendBuffer, sizeof(GeneralSendBuffer),
@@ -477,6 +550,10 @@ int nrfsWrite(nrfs fs, nrfsFile _file, const void* buffer, uint64_t size, uint64
 	diff = 1000000 * (end1.tv_sec - start1.tv_sec) + end1.tv_usec - start1.tv_usec;
 	WriteTime1 += diff;
 
+/*分两种情况：
+*新建文件和已存在文件
+*在元数据测试里暂时不考虑这一点
+*/
 	gettimeofday(&start1, NULL);
 	sendMessage(node_id, &bufferExtentWriteSend, sizeof(ExtentWriteSendBuffer),
 					&bufferExtentWriteReceive, sizeof(ExtentWriteReceiveBuffer));
@@ -532,6 +609,68 @@ int nrfsWrite(nrfs fs, nrfsFile _file, const void* buffer, uint64_t size, uint64
 	return (int)length_copied;
 }
 
+
+/* Fill file position information for read and write. No check on parameters.
+   @param   size        Size to operate.
+   @param   offset      Offset to operate.
+   @param   fpi         File position information.
+   @param   metaFile    File meta. */
+/* FIXME: review logic here. */
+static void fillFilePositionInformation(uint64_t size, uint64_t offset, file_pos_info *fpi, FileMeta *metaFile)
+{
+    Debug::debugItem("Stage 8.");
+    uint64_t offsetStart, offsetEnd;
+    offsetStart = offset;  /* Relative offset of start byte to operate in file. */
+    offsetEnd = size + offset - 1; /* Relative offset of end byte to operate in file. */
+    uint64_t boundStartExtent, boundEndExtent, /* Bound of start extent and end extent. */
+             offsetInStartExtent, offsetInEndExtent, /* Offset of start byte in start extent and end byte in end extent. */
+             sizeInStartExtent, sizeInEndExtent; /* Size to operate in start extent and end extent. */
+    uint64_t offsetStartOfCurrentExtent = 0; /* Relative offset of start byte in current extent. */
+    Debug::debugItem("Stage 9.");
+    for (uint64_t i = 0; i < metaFile->count; i++) {
+        if ((offsetStartOfCurrentExtent + metaFile->tuple[i].countExtentBlock * BLOCK_SIZE - 1) >= offsetStart) { /* A -1 is needed to locate offset of end byte in current extent. */
+            boundStartExtent = i;       /* Assign bound of extent containing start byte. */
+            offsetInStartExtent = offsetStart - offsetStartOfCurrentExtent; /* Assign relative offset of start byte in start extent. */
+            sizeInStartExtent = metaFile->tuple[i].countExtentBlock * BLOCK_SIZE - offsetInStartExtent; /* Assign size to opreate in start extent. */
+            break;
+        }
+        offsetStartOfCurrentExtent += metaFile->tuple[i].countExtentBlock * BLOCK_SIZE; /* Add count of blocks in current extent. */
+    }
+    offsetStartOfCurrentExtent = 0;     /* Relative offset of end byte in current extent. */
+    Debug::debugItem("Stage 10. metaFile->count = %lu", metaFile->count);
+    for (uint64_t i = 0; i < metaFile->count; i++) {
+        if ((offsetStartOfCurrentExtent + metaFile->tuple[i].countExtentBlock * BLOCK_SIZE - 1) >= offsetEnd) { /* A -1 is needed to locate offset of end byte in current extent. */
+            boundEndExtent = i;         /* Assign bound of extent containing end byte. */
+            offsetInEndExtent = offsetEnd - offsetStartOfCurrentExtent; /* Assign relative offset of end byte in end extent. */
+            sizeInEndExtent = offsetInEndExtent + 1; /* Assign size to opreate in end extent. */
+            break;
+        }
+        offsetStartOfCurrentExtent += metaFile->tuple[i].countExtentBlock * BLOCK_SIZE; /* Add count of blocks in current extent. */
+    }
+    Debug::debugItem("Stage 11. boundStartExtent = %lu, boundEndExtent = %lu", boundStartExtent, boundEndExtent);
+    if (boundStartExtent == boundEndExtent) { /* If in one extent. */
+        fpi->len = 1;                   /* Assign length. */
+        fpi->tuple[0].node_id = metaFile->tuple[boundStartExtent].hashNode; /* Assign node ID. */
+        fpi->tuple[0].offset = metaFile->tuple[boundStartExtent].indexExtentStartBlock * BLOCK_SIZE + offsetInStartExtent; /* Assign offset. */
+        fpi->tuple[0].size = size;
+    } else {                            /* Multiple extents. */
+        Debug::debugItem("Stage 12.");
+        fpi->len = boundEndExtent - boundStartExtent + 1; /* Assign length. */
+        fpi->tuple[0].node_id = metaFile->tuple[boundStartExtent].hashNode; /* Assign node ID of start extent. */
+        fpi->tuple[0].offset = metaFile->tuple[boundStartExtent].indexExtentStartBlock * BLOCK_SIZE + offsetInStartExtent; /* Assign offset. */
+        fpi->tuple[0].size = sizeInStartExtent; /* Assign size. */
+        for (int i = 1; i <= ((int)(fpi->len) - 2); i++) { /* Start from second extent to one before last extent. */
+            fpi->tuple[i].node_id = metaFile->tuple[boundStartExtent + i].hashNode; /* Assign node ID of start extent. */
+            fpi->tuple[i].offset = metaFile->tuple[boundStartExtent + i].indexExtentStartBlock * BLOCK_SIZE; /* Assign offset. */
+            fpi->tuple[i].size = metaFile->tuple[boundStartExtent + i].countExtentBlock * BLOCK_SIZE; /* Assign size. */
+        }
+        fpi->tuple[fpi->len - 1].node_id= metaFile->tuple[boundEndExtent].hashNode; /* Assign node ID of start extent. */
+        fpi->tuple[fpi->len - 1].offset = 0;  /* Assign offset. */
+        fpi->tuple[fpi->len - 1].size = sizeInEndExtent; /* Assign size. */
+        Debug::debugItem("Stage 13.");
+    }
+}
+
 /**
 *nrfsRead - Read data into an open file.
 * @param fs The configured filesystem handle.
@@ -555,6 +694,34 @@ int nrfsRead(nrfs fs, nrfsFile _file, void* buffer, uint64_t size, uint64_t offs
     bufferExtentReadSend.message = MESSAGE_EXTENTREAD;
 
     correct((char*)_file, bufferExtentReadSend.path);
+    FileMeta attr;
+
+    Cache::Handle* handle = cache->Lookup(bufferExtentReadSend.path);
+    if (handle != NULL) {
+        FileMeta attr = *(FileMeta *)(cache->Value(handle));
+        cache->Release(handle);
+        Debug::debugItem("nrfsGetAttribute, META.size = %d", attr->size);
+        fillFilePositionInformation(size, offset, &fpi, &attr);
+
+        gettimeofday(&start1, NULL);
+        for(int i = 0; i < (int)fpi.len; i++)
+        {
+            Debug::debugItem("fpi: i = %d, node_id = %d,offset = %x, size = %d",
+                i, fpi.tuple[i].node_id, fpi.tuple[i].offset, fpi.tuple[i].size);
+
+            client->getRdmaSocketInstance()->RemoteRead((uint64_t)((char*)buffer + length_copied),
+                                  fpi.tuple[i].node_id,
+                                  fpi.tuple[i].offset + DmfsDataOffset,
+                                  fpi.tuple[i].size);
+
+            length_copied += fpi.tuple[i].size;
+        }
+
+        gettimeofday(&end1, NULL);
+        diff = 1000000 * (end1.tv_sec - start1.tv_sec) + end1.tv_usec - start1.tv_usec;
+        return 0;
+    }
+
 	uint16_t node_id = get_node_id_by_path(bufferExtentReadSend.path);
 
     bufferExtentReadSend.size = size; /* Assign size. */
@@ -652,6 +819,21 @@ int nrfsCreateDirectory(nrfs fs, const char* _path)
 
 		GeneralReceiveBuffer bufferGeneralReceive; /* Receive buffer. */
 		uint16_t node_id = get_node_id_by_path(bufferGeneralSend.path);
+
+        int charge = sizeof(DirectoryMeta);
+        DirectoryMeta *pDirMeta;
+        pDirMeta = (DirectoryMeta *)malloc(sizeof(DirectoryMeta));
+        if (pDirMeta == NULL){
+          printf("2.%s\n", "no free memory");
+          return;
+        }
+        memset(pDirMeta, 0, sizeof(DirectoryMeta));
+        pDirMeta->isDirMeta = true;
+        pDirMeta->count = 0;
+        void *value = reinterpret_cast<void *>(pDirMeta);
+        cache->Release(cache->Insert(bufferGeneralSend.path, value, charge,
+                                       &Deleter));
+
 		sendMessage(node_id, &bufferGeneralSend, sizeof(GeneralSendBuffer),
 			&bufferGeneralReceive, sizeof(GeneralReceiveBuffer));
 		if(bufferGeneralReceive.result == false) {
@@ -674,6 +856,21 @@ int nrfsCreateDirectory(nrfs fs, const char* _path)
 
 	correct(_path, bufferGeneralSend.path);
 	uint16_t node_id = get_node_id_by_path(bufferGeneralSend.path);
+
+    int charge = sizeof(DirectoryMeta);
+    DirectoryMeta *pDirMeta;
+    pDirMeta = (DirectoryMeta *)malloc(sizeof(DirectoryMeta));
+    if (pDirMeta == NULL){
+      printf("2.%s\n", "no free memory");
+      return;
+    }
+    memset(pDirMeta, 0, sizeof(DirectoryMeta));
+    pDirMeta->isDirMeta = true;
+    pDirMeta->count = 0;
+    void *value = reinterpret_cast<void *>(pDirMeta);
+    cache->Release(cache->Insert(bufferGeneralSend.path, value, charge,
+                                   &Deleter));
+
 	sendMessage(node_id, &bufferGeneralSend, sizeof(GeneralSendBuffer),
 		&bufferGeneralReceive, sizeof(GeneralReceiveBuffer));
 	if(bufferGeneralReceive.result == false)
@@ -702,6 +899,14 @@ int nrfsDelete(nrfs fs, const char* _path)
     GetAttributeReceiveBuffer bufferReceive; /* Receive buffer. */
 
 	correct(_path, bufferGeneralSend.path);
+
+    Cache::Handle* handle = cache->Lookup(bufferGeneralSend.path);
+    //int r = (handle == NULL) ? -1 : DecodeValue(cache_->Value(handle));
+    if (handle != NULL) {
+      cache->Release(handle);
+      cache->Erase(bufferGeneralSend.path);
+    }
+
 	uint16_t node_id = get_node_id_by_path(bufferGeneralSend.path);
 
 	sendMessage(node_id, &bufferGeneralSend, sizeof(GeneralSendBuffer),
@@ -744,6 +949,7 @@ int renameDirectory(nrfs fs, const char *oldPath, const char *newPath)
 	int result = 0;
 	char tempoldPath[MAX_PATH_LENGTH];
 	char tempnewPath[MAX_PATH_LENGTH];
+
 	result |= nrfsCreateDirectory(fs, newPath);
 	nrfsListDirectory(fs, oldPath, &list);
 	for(i = 0; i < list.count; i++)
@@ -790,12 +996,27 @@ int nrfsRename(nrfs fs, const char* _oldpath, const char* _newpath)
 
 	correct(_oldpath, bufferRenameSend.pathOld);
 	correct(_newpath, bufferRenameSend.pathNew);
-
+/*
+    Cache::Handle* handle = cache->Lookup(bufferRenameSend.pathOld);
+    //int r = (handle == NULL) ? -1 : DecodeValue(cache_->Value(handle));
+    if (handle != NULL) {
+        cache->Release(handle);
+        cache->Erase(bufferRenameSend.pathOld);
+    }
+    */
+//这里可以有一个小小的优化，先查再删
 	FileMeta meta;
-	if(nrfsGetAttribute(fs, bufferRenameSend.pathOld, &meta)) //返回值是-1和0两种
+	if(nrfsGetAttribute(fs, bufferRenameSend.pathOld, &meta)) {//返回值是-1和0两种
 		result = 1;
+    }
 	else
 	{
+        Cache::Handle* handle = cache->Lookup(bufferRenameSend.pathOld);
+        if (handle != NULL) {
+            cache->Release(handle);
+            cache->Erase(bufferRenameSend.pathOld);
+        }
+
 		if(meta.count == MAX_FILE_EXTENT_COUNT)
 		{
 			result = renameDirectory(fs, _oldpath, _newpath);
@@ -803,6 +1024,21 @@ int nrfsRename(nrfs fs, const char* _oldpath, const char* _newpath)
 		}
 		/* Rename for a directory is not implemented */
 
+        //add cache
+        int charge = sizeof(FileMeta);
+        FileMeta *pFileMeta;
+        pFileMeta = (FileMeta *)malloc(sizeof(FileMeta));
+        if (pFileMeta == NULL){
+            printf("1.%s\n", "no free memory");
+            return 0;
+        }
+        memset(pFileMeta, 0, sizeof(FileMeta));
+        //copy file meta
+        *pFileMeta = meta;
+        void *value = reinterpret_cast<void *>(pFileMeta);
+        cache->Release(cache->Insert(bufferRenameSend.pathNew, value, charge,
+                                   &Deleter));
+        //end of add cache
 		if(nrfsMknodWithMeta(fs, bufferRenameSend.pathNew, &meta))
 		{
 			Debug::notifyError("nrfsMknodWithMeta failed.");
@@ -846,7 +1082,11 @@ int nrfsListDirectory(nrfs fs, const char* _path, nrfsfilelist *list)
 	correct(_path, bufferGeneralSend.path); //进行路径处理,得到dir1/dir2 或者dir1/file1
 
 	uint16_t node_id = get_node_id_by_path(bufferGeneralSend.path);
-
+    Cache::Handle* handle = cache->Lookup(bufferRenameSend.pathOld);
+    if (handle != NULL) {
+        cache->Release(handle);
+        *list = (nrfsfilelist *)(cache->Value(handle));
+    }
 	sendMessage(node_id, &bufferGeneralSend, sizeof(GeneralSendBuffer),
 					&bufferReadDirectoryReceive, sizeof(ReadDirectoryReceiveBuffer));
 	*list = bufferReadDirectoryReceive.list;
