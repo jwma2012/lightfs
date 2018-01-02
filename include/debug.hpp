@@ -10,6 +10,18 @@
 #include <stdarg.h>                     /* Standard argument operations. E.g. va_list */
 #include <sys/time.h>                   /* Time functions. E.g. gettimeofday() */
 
+
+#if 1
+#define TRACE_LOG(format, ...) (fprintf(stdout, "#%s(%d)-<%s>#\n"##format, __FILE__, __LINE__, __FUNCTION__, ##__VA_ARGS__))
+#else
+#define TRACE_LOG() ()
+//空宏
+#endif
+
+
+#define RED_PRINT(str) printf("\033[0;31m%s\033[0m", str);
+#define GREEN_PRINT(str) printf("\033[0;42;1m%s\033[0m\n", str);
+
 /** Defninitions. **/
 #define MAX_FORMAT_LEN 255
 /*

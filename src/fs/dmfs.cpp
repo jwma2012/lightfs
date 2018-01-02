@@ -1,9 +1,9 @@
 #include "RPCServer.hpp"
 #include <sys/wait.h>
 #include <sys/types.h>
-#include <timer.h>
+//#include "timer.h"
 RPCServer *server;
-Timer *timer;
+//Timer *timer;
 
 /* Catch ctrl-c and destruct. */
 void Stop (int signo) {
@@ -13,7 +13,7 @@ void Stop (int signo) {
 }
 int main() {
     signal(SIGINT, Stop);
-    timer = new Timer();
+    //timer = new Timer();
     server = new RPCServer(2); //RPCServer(_cqSize), _cqSize为2
     char *p = (char *)server->getMemoryManagerInstance()->getDataAddress();
     while (true) {

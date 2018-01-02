@@ -40,8 +40,8 @@ bool RPCClient::RdmaCall(uint16_t DesNodeID, char *bufferSend, uint64_t lengthSe
 	uint64_t sendBuffer, receiveBuffer, remoteRecvBuffer;
 	uint16_t offset = 0;
 	uint32_t imm = (uint32_t)socket->getNodeID();
-	// struct  timeval startt, endd;
-	// unsigned long diff, tempCount = 0;
+	//struct timeval startt, endd;
+	//unsigned long diff = 0;
 	GeneralSendBuffer *send = (GeneralSendBuffer*)bufferSend;
 	lengthReceive -= ContractSendBuffer(send);
 	send->taskID = ID;
@@ -90,9 +90,10 @@ bool RPCClient::RdmaCall(uint16_t DesNodeID, char *bufferSend, uint64_t lengthSe
 		//应该是死循环
 
 	} else {
-		// gettimeofday(&startt,NULL);
+		//gettimeofday(&startt,NULL);
+		Debug::startTimer("polling result");
 		while (recv->message != MESSAGE_RESPONSE) {
-			printf("client...\n");
+			//printf("client...\n");
 			//这个相当于在轮询结果
 			/* gettimeofday(&endd,NULL);
 			diff = 1000000 * (endd.tv_sec - startt.tv_sec) + endd.tv_usec - startt.tv_usec;
@@ -106,6 +107,17 @@ bool RPCClient::RdmaCall(uint16_t DesNodeID, char *bufferSend, uint64_t lengthSe
 				diff = 0;
 			}*/
 		}
+		Debug::endTimer("polling result");
+		/*
+		gettimeofday(&endd, NULL);
+		diff = 1000000 * (endd.tv_sec - startt.tv_sec) + endd.tv_usec - startt.tv_usec;
+		Debug::notifyInfo("polling lasts %ld us", diff);
+*/
+		/*
+		std::string out;
+
+		print_action("");
+		*/
 	}
 	memcpy((void*)bufferReceive, (void *)receiveBuffer, lengthReceive);
 	Debug::endTimer("rdma call");

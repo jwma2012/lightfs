@@ -5,13 +5,6 @@
 /** Included files. **/
 #include "debug.hpp"
 
-#if DEBUG
-#define TRACE_LOG(format, ...) (fprintf(stdout, "#%s(%d)-<%s>#\n"##format, __FILE__, __LINE__, __FUNCTION__, ##__VA_ARGS__))
-#else
-#define TRACE_LOG() ()
-//空宏
-#endif
-
 /** Implemented functions. **/
 /* Print debug title string.
    @param   str     String of debug title. */

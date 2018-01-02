@@ -11,8 +11,8 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
-#define BUFFER_SIZE 0x1000000
-//约1MB
+#define BUFFER_SIZE 0x10000000
+//约10MB
 int myid, file_seq;
 int numprocs;
 nrfs fs;

@@ -42,6 +42,8 @@ uint64_t LockService::ReadLock(uint16_t NodeID, uint64_t Address) {
     } else {
         while (true) {
             if (__sync_bool_compare_and_swap((uint32_t*)(LockAddress + 4), 0, 0))
+                //这是按照大端的做法，高地址在高位，
+                //但也有可能这两个数据没有关系，占用了64位的空间
                 break;
             usleep(1);
         }

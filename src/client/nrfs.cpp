@@ -10,11 +10,13 @@
 #include "leveldb/cache.h"
 
 using namespace std;
+using namespace leveldb;
 mutex key_m;
 uint64_t key;
 atomic<bool> isConnected;
 RPCClient *client;
 uint64_t DmfsDataOffset;
+static std::vector<string> deleted_keys;
 
 static const int kCacheSize = 256;
 Cache* cache;
@@ -75,8 +77,8 @@ static int DecodeValue(void* v) {
   bool *pBool = (bool *)v;
   if (*pBool) {
     DirectoryMeta *pDirMeta = (DirectoryMeta *)v;
-    for (int i = 0; i < pDirMeta->count; i++) {
-      printf("DecodeValue %d %s\n", i, pDirMeta->tuple[i].names);
+    for (uint64_t i = 0; i < pDirMeta->count; i++) {
+      printf("DecodeValue %ld %s\n", i, pDirMeta->tuple[i].names);
     }
   }
   else {
@@ -88,8 +90,8 @@ static int DecodeValue(void* v) {
 }
 
 static void Deleter(const Slice& key, void* v) {
-    deleted_keys.push_back(key);
-    printf("Delete %d in cache.\n", key.data());
+    deleted_keys.push_back(key.data());
+    printf("Delete %s in cache.\n", key.data());
     free(v);
     v = NULL;
 }
@@ -403,12 +405,11 @@ int nrfsMknod(nrfs fs, const char* _path)
 	correct(_path, sendBuffer.path);
 	uint16_t node_id  = get_node_id_by_path(sendBuffer.path);
 
-    int charge = sizeof(FileMeta);
     FileMeta *pFileMeta;
     pFileMeta = (FileMeta *)malloc(sizeof(FileMeta));
     if (pFileMeta == NULL){
       printf("1.%s\n", "no free memory");
-      return;
+      return 1;
     }
     memset(pFileMeta, 0, sizeof(FileMeta));
     //new file meta
@@ -417,7 +418,7 @@ int nrfsMknod(nrfs fs, const char* _path)
     pFileMeta->count = 0; /* Initialize count of extents as 0. */
     pFileMeta->size = 0;
     void *value = reinterpret_cast<void *>(pFileMeta);
-    cache->Release(cache->Insert(sendBuffer.path, value, charge,
+    cache->Release(cache->Insert(sendBuffer.path, value, 1,
                                    &Deleter));
 
 	sendMessage(node_id, &sendBuffer, sizeof(GeneralSendBuffer),
@@ -460,16 +461,18 @@ int nrfsGetAttribute(nrfs fs, nrfsFile _file, FileMeta *attr)
 
     correct((char*)_file, bufferGeneralSend.path);
     Cache::Handle* handle = cache->Lookup(bufferGeneralSend.path);
-    //int r = (handle == NULL) ? -1 : DecodeValue(cache_->Value(handle));
+    //int r = (handle == NULL) ? -1 : DecodeValue(cache->Value(handle));
     if (handle != NULL) {
-      //cache_->Release(handle);
-        *attr = *(fileMeta *)(cache->Value(handle));  //涉及到了内存拷贝
+        GREEN_PRINT("Hit\n");
+      //cache->Release(handle);
+        *attr = *(FileMeta *)(cache->Value(handle));  //涉及到了内存拷贝
         cache->Release(handle);
         Debug::debugItem("nrfsGetAttribute, in cache, META.size = %d", attr->size);
         return 0;
     }
-
+    RED_PRINT("Miss\n");
     uint16_t node_id = get_node_id_by_path(bufferGeneralSend.path);
+
 
     GetAttributeReceiveBuffer bufferGetAttributeReceive;
 
@@ -501,12 +504,14 @@ int nrfsAccess(nrfs fs, const char* _path)
 
 	correct(_path, sendBuffer.path);
     Cache::Handle* handle = cache->Lookup(sendBuffer.path);
-    //int r = (handle == NULL) ? -1 : DecodeValue(cache_->Value(handle));
+    //int r = (handle == NULL) ? -1 : DecodeValue(cache->Value(handle));
     if (handle != NULL) {
-      cache_->Release(handle);
-      return 0;
+        GREEN_PRINT("Hit\n");
+        cache->Release(handle);
+        return 0;
     }
 //cache 不命中则继续远程取
+    RED_PRINT("Miss\n");
 	uint16_t node_id = get_node_id_by_path(sendBuffer.path);
 
 	sendMessage(node_id, &sendBuffer, sizeof(GeneralSendBuffer),
@@ -698,9 +703,10 @@ int nrfsRead(nrfs fs, nrfsFile _file, void* buffer, uint64_t size, uint64_t offs
 
     Cache::Handle* handle = cache->Lookup(bufferExtentReadSend.path);
     if (handle != NULL) {
-        FileMeta attr = *(FileMeta *)(cache->Value(handle));
+        GREEN_PRINT("Hit\n");
+        attr = *(FileMeta *)(cache->Value(handle));
         cache->Release(handle);
-        Debug::debugItem("nrfsGetAttribute, META.size = %d", attr->size);
+        Debug::debugItem("nrfsGetAttribute, META.size = %ld", attr.size);
         fillFilePositionInformation(size, offset, &fpi, &attr);
 
         gettimeofday(&start1, NULL);
@@ -721,7 +727,7 @@ int nrfsRead(nrfs fs, nrfsFile _file, void* buffer, uint64_t size, uint64_t offs
         diff = 1000000 * (end1.tv_sec - start1.tv_sec) + end1.tv_usec - start1.tv_usec;
         return 0;
     }
-
+    RED_PRINT("Miss\n");
 	uint16_t node_id = get_node_id_by_path(bufferExtentReadSend.path);
 
     bufferExtentReadSend.size = size; /* Assign size. */
@@ -820,19 +826,18 @@ int nrfsCreateDirectory(nrfs fs, const char* _path)
 		GeneralReceiveBuffer bufferGeneralReceive; /* Receive buffer. */
 		uint16_t node_id = get_node_id_by_path(bufferGeneralSend.path);
 
-        int charge = sizeof(DirectoryMeta);
+        //int charge = sizeof(DirectoryMeta);
         DirectoryMeta *pDirMeta;
         pDirMeta = (DirectoryMeta *)malloc(sizeof(DirectoryMeta));
         if (pDirMeta == NULL){
           printf("2.%s\n", "no free memory");
-          return;
+          return 1;
         }
         memset(pDirMeta, 0, sizeof(DirectoryMeta));
         pDirMeta->isDirMeta = true;
         pDirMeta->count = 0;
         void *value = reinterpret_cast<void *>(pDirMeta);
-        cache->Release(cache->Insert(bufferGeneralSend.path, value, charge,
-                                       &Deleter));
+        cache->Release(cache->Insert(bufferGeneralSend.path, value, 1, &Deleter));
 
 		sendMessage(node_id, &bufferGeneralSend, sizeof(GeneralSendBuffer),
 			&bufferGeneralReceive, sizeof(GeneralReceiveBuffer));
@@ -857,7 +862,7 @@ int nrfsCreateDirectory(nrfs fs, const char* _path)
 	correct(_path, bufferGeneralSend.path);
 	uint16_t node_id = get_node_id_by_path(bufferGeneralSend.path);
 
-    int charge = sizeof(DirectoryMeta);
+    //int charge = sizeof(DirectoryMeta);
     DirectoryMeta *pDirMeta;
     pDirMeta = (DirectoryMeta *)malloc(sizeof(DirectoryMeta));
     if (pDirMeta == NULL){
@@ -868,7 +873,7 @@ int nrfsCreateDirectory(nrfs fs, const char* _path)
     pDirMeta->isDirMeta = true;
     pDirMeta->count = 0;
     void *value = reinterpret_cast<void *>(pDirMeta);
-    cache->Release(cache->Insert(bufferGeneralSend.path, value, charge,
+    cache->Release(cache->Insert(bufferGeneralSend.path, value, 1,
                                    &Deleter));
 
 	sendMessage(node_id, &bufferGeneralSend, sizeof(GeneralSendBuffer),
@@ -901,12 +906,13 @@ int nrfsDelete(nrfs fs, const char* _path)
 	correct(_path, bufferGeneralSend.path);
 
     Cache::Handle* handle = cache->Lookup(bufferGeneralSend.path);
-    //int r = (handle == NULL) ? -1 : DecodeValue(cache_->Value(handle));
+    //int r = (handle == NULL) ? -1 : DecodeValue(cache->Value(handle));
     if (handle != NULL) {
-      cache->Release(handle);
-      cache->Erase(bufferGeneralSend.path);
+        GREEN_PRINT("Hit\n");
+        cache->Release(handle);
+        cache->Erase(bufferGeneralSend.path);
     }
-
+    RED_PRINT("Miss\n");
 	uint16_t node_id = get_node_id_by_path(bufferGeneralSend.path);
 
 	sendMessage(node_id, &bufferGeneralSend, sizeof(GeneralSendBuffer),
@@ -998,7 +1004,7 @@ int nrfsRename(nrfs fs, const char* _oldpath, const char* _newpath)
 	correct(_newpath, bufferRenameSend.pathNew);
 /*
     Cache::Handle* handle = cache->Lookup(bufferRenameSend.pathOld);
-    //int r = (handle == NULL) ? -1 : DecodeValue(cache_->Value(handle));
+    //int r = (handle == NULL) ? -1 : DecodeValue(cache->Value(handle));
     if (handle != NULL) {
         cache->Release(handle);
         cache->Erase(bufferRenameSend.pathOld);
@@ -1013,10 +1019,11 @@ int nrfsRename(nrfs fs, const char* _oldpath, const char* _newpath)
 	{
         Cache::Handle* handle = cache->Lookup(bufferRenameSend.pathOld);
         if (handle != NULL) {
+            GREEN_PRINT("Hit\n");
             cache->Release(handle);
             cache->Erase(bufferRenameSend.pathOld);
         }
-
+        RED_PRINT("Miss\n");
 		if(meta.count == MAX_FILE_EXTENT_COUNT)
 		{
 			result = renameDirectory(fs, _oldpath, _newpath);
@@ -1025,7 +1032,8 @@ int nrfsRename(nrfs fs, const char* _oldpath, const char* _newpath)
 		/* Rename for a directory is not implemented */
 
         //add cache
-        int charge = sizeof(FileMeta);
+
+        //int charge = sizeof(FileMeta);
         FileMeta *pFileMeta;
         pFileMeta = (FileMeta *)malloc(sizeof(FileMeta));
         if (pFileMeta == NULL){
@@ -1036,7 +1044,7 @@ int nrfsRename(nrfs fs, const char* _oldpath, const char* _newpath)
         //copy file meta
         *pFileMeta = meta;
         void *value = reinterpret_cast<void *>(pFileMeta);
-        cache->Release(cache->Insert(bufferRenameSend.pathNew, value, charge,
+        cache->Release(cache->Insert(bufferRenameSend.pathNew, value, 1,
                                    &Deleter));
         //end of add cache
 		if(nrfsMknodWithMeta(fs, bufferRenameSend.pathNew, &meta))
@@ -1082,14 +1090,32 @@ int nrfsListDirectory(nrfs fs, const char* _path, nrfsfilelist *list)
 	correct(_path, bufferGeneralSend.path); //进行路径处理,得到dir1/dir2 或者dir1/file1
 
 	uint16_t node_id = get_node_id_by_path(bufferGeneralSend.path);
-    Cache::Handle* handle = cache->Lookup(bufferRenameSend.pathOld);
+    Cache::Handle* handle = cache->Lookup(bufferGeneralSend.path);
     if (handle != NULL) {
+        GREEN_PRINT("Hit\n");
         cache->Release(handle);
-        *list = (nrfsfilelist *)(cache->Value(handle));
+        *list = *((nrfsfilelist *)(cache->Value(handle)));
+        Debug::endTimer("nrfsListDirectory");
+        return 0;
     }
+    RED_PRINT("Miss\n");
 	sendMessage(node_id, &bufferGeneralSend, sizeof(GeneralSendBuffer),
 					&bufferReadDirectoryReceive, sizeof(ReadDirectoryReceiveBuffer));
 	*list = bufferReadDirectoryReceive.list;
+
+    //int charge = sizeof(DirectoryMeta);
+    DirectoryMeta *pDirMeta;
+    pDirMeta = (DirectoryMeta *)malloc(sizeof(DirectoryMeta));
+    if (pDirMeta == NULL){
+      printf("2.%s\n", "no free memory");
+      return 0;
+    }
+    memset(pDirMeta, 0, sizeof(DirectoryMeta));
+    *pDirMeta = bufferReadDirectoryReceive.list;
+    void *value = reinterpret_cast<void *>(pDirMeta);
+    cache->Release(cache->Insert(bufferGeneralSend.path, value, 1,
+                                   &Deleter));
+
     Debug::endTimer("nrfsListDirectory");
 	if(bufferReadDirectoryReceive.result)
 		return 0;

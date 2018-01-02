@@ -5,6 +5,7 @@
 *
 ***********************************************************************/
 #include "RdmaSocket.hpp"
+#include <stdlib.h>
 using namespace std;
 
 RdmaSocket::RdmaSocket(int _cqNum, uint64_t _mm, uint64_t _mmSize, Configuration* _conf, bool _isServer, uint8_t _Mode) :
@@ -176,14 +177,17 @@ bool RdmaSocket::CreateResources() {
     /* register the memory buffer */
     Debug::notifyInfo("Register Memory Region");
 
-    mr = ibv_reg_mr(pd, (void*)mm, mmSize, mrFlags);
+    //mr = ibv_reg_mr(pd, (void*)mm, mmSize, mrFlags);
+    char *p = NULL;
+    p = (char *)malloc(10*sizeof(char));
+    mr = ibv_reg_mr(pd, (void*)p, 10, mrFlags);
     if (mr == NULL) {
         Debug::notifyError("Memory registration failed");
         rc = 1;
         goto CreateResourcesExit;
     }
 
-    CreateResourcesExit:
+CreateResourcesExit:
     if (rc) {
         /* Error encountered, cleanup */
         Debug::notifyError("Error Encountered, Cleanup ...");

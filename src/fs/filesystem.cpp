@@ -7,7 +7,7 @@
 #include "RPCServer.hpp"
 
 extern RPCServer *server;//它在dmfs.cpp中被声明
-extern Timer *Timer;//它在dmfs.cpp中被声明
+//extern Timer *Timer;//它在dmfs.cpp中被声明
 
 bool Dotx = true;
 uint64_t TxLocalBegin() {
@@ -432,6 +432,7 @@ bool FileSystem::addMetaToDirectory(const char *path, const char *name, bool isD
     HashTable::getUniqueHash(path, strlen(path), &hashUnique); /* Get unique hash. */
     NodeHash hashNode = storage->getNodeHash(&hashUnique); /* Get node hash by unique hash. */
     AddressHash hashAddress = HashTable::getAddressHash(&hashUnique); /* Get address hash by unique hash. */
+    //地址是20位的
     uint64_t LocalTxID;
     if (checkLocal(hashNode) == true) { /* If local node. */
         // return true;

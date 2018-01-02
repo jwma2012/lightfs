@@ -43,11 +43,14 @@ set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -L/usr/local/lib/libfuse.so")
 set(CLIENT_BASE ${PROJECT_SOURCE_DIR}/client)
 set(CNET_SRC ${PROJECT_SOURCE_DIR}/src/net)
 set(CLIB_SRC ${PROJECT_SOURCE_DIR}/src/client)
-set(PORT_SRC ${PROJECT_SOURCE_DIR}/src/port)
-set(UTIl_SRC ${PROJECT_SOURCE_DIR}/src/util)
-file(GLOB_RECURSE NRFS_LIB_SRC ${CNET_SRC}/*.cpp ${CLIB_SRC}/*.cpp ${TOOLS_SRC}/*.cpp ${FS_SRC}/*.cpp ${PORT_SRC}/*.cc ${UTIL_SRC}/*.cc)
-add_library(nrfsc SHARED ${NRFS_LIB_SRC})
+set(OCTOPUS_PORT_SRC ${PROJECT_SOURCE_DIR}/src/port)
+set(OCTOPUS_UTILS_SRC ${PROJECT_SOURCE_DIR}/src/utils)
+
+file(GLOB_RECURSE NRFS_LIB_SRC ${CNET_SRC}/*.cpp ${CLIB_SRC}/*.cpp ${TOOLS_SRC}/*.cpp ${FS_SRC}/*.cpp)
+
+add_library(nrfsc SHARED ${NRFS_LIB_SRC} ${OCTOPUS_PORT_SRC}/port_posix.cc ${OCTOPUS_UTILS_SRC}/cache.cc ${OCTOPUS_UTILS_SRC}/coding.cc ${OCTOPUS_UTILS_SRC}/hash.cc)
 add_library(jninrfs SHARED ${NRFS_LIB_SRC} ${CLIB_SRC}/JavaApiImpl.cpp)
+
 # Build client test
 find_package(MPI REQUIRED)
 set (CMAKE_C_COMPILER ${MPI_C_COMPILER})
