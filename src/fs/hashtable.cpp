@@ -64,6 +64,7 @@ bool HashTable::get(const char *path, uint64_t *indexMeta, bool *isDirectory)
         // printf("%016x%016x%016x%016x\n", hashUnique.value[3], hashUnique.value[2], hashUnique.value[1], hashUnique.value[0]);
         AddressHash hashAddress = HashTable::getAddressHash(&hashUnique); /* Get address hash by unique hash. */
         // getAddressHash(path, strlen(path), &hashAddress); /* Get address hash. */
+        //这完全是做重复的工作，有好几个地方已经算了，而且算hash值还是比较占CPU的。
         bool result;
         mutexBitmapChainedItems.lock(); /* Though currently there is no bitmap reading or writing, other operations such as delete might affect hash item reading. */
         {

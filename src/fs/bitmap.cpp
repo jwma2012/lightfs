@@ -106,7 +106,7 @@ uint64_t Bitmap::countTotal()
    (If fail in constructing, error information will be printed in standard error output.)
    @param   count   The count of total bits in the bitmap.
    @param   buffer  The buffer to contain bitmap. */
-Bitmap::Bitmap(uint64_t count, char *buffer) /* Constructor of bitmap. */
+ Bitmap::Bitmap(uint64_t count, char *buffer) /* Constructor of bitmap. */
 {
     if (count % 8 == 0) {
         if (buffer != NULL) {           /* Judge if buffer is null or not. */

@@ -15,9 +15,9 @@ RPCServer::RPCServer(int _cqSize) :cqSize(_cqSize) {
 	socket->RdmaListen();
 	fs = new FileSystem((char *)mem->getMetadataBaseAddress(),
               (char *)mem->getDataAddress(),
-              1024 * 20,/* Constructor of file system. */
-              1024 * 30,
-              2000,
+              1024 * 20,/* Constructor of file system. */ //2w个文件
+              1024 * 30, //约3万个目录
+              2000, //2000个数据块，每个块1MB，也就是分布式文件系统总容量2GB*server个数
               conf->getServerCount(),
               socket->getNodeID());
 

@@ -53,7 +53,6 @@ typedef struct
 
 typedef struct                          /* File meta structure. */
 {
-    bool isDirMeta;
     time_t timeLastModified;        /* Last modified time. */
     uint64_t count;                 /* Count of extents. (not required and might have consistency problem with size) */
     uint64_t size;                  /* Size of extents. */

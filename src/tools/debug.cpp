@@ -106,5 +106,12 @@ void Debug::endTimer(const char *timerName)
     }
 }
 
+uint64_t Debug::NowMicros() {
+    struct timeval tv;
+    gettimeofday(&tv, NULL);
+    return static_cast<uint64_t>(tv.tv_sec) * 1000 * 1000 + tv.tv_usec;
+}
+
+
 /** Variables. **/
 long Debug::startTime;                  /* Last start time in milliseconds. */

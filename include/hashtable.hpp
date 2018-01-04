@@ -38,7 +38,7 @@ using namespace CryptoPP;
   1 * 16 bytes  |   Lock   |   Head index -|-->|                    |            |             |             -|--> ....                                      0 for end of chain
                 +----------+---------------+   +--------------------+------------+-------------+--------------+
                 |          |               |   |                       An item of chain                       |
-                |   ....   |      ....     |   
+                |   ....   |      ....     |
                 |          |               |
                 +----------+---------------+
  1M * 16 bytes  |   Lock   |   Head index -|--> ....
@@ -50,7 +50,7 @@ using namespace CryptoPP;
                     +---------------------+--------------------------+-----------------------------------------+
                     |  16 MB              |   (count / 8) bytes      |   (count * sizeof(ChainedItem)) bytes   |
 
-    
+
     Position actually contains index of chained item.
     +--------------+-------------------------+             +--------------+----------+
     |   Position   |  Next free bit pointer -|--> .... --->|   Position   |   NULL   |
@@ -99,7 +99,7 @@ private:
     HashItem *itemsHash;                /* Hash items of hash table. */
     ChainedItem *itemsChained;          /* Chained items of hash table. */
     FreeBit *headFreeBit;               /* Head free bit in the chain. */
-    
+
 public:
     static void getAddressHash(const char *buf, uint64_t len, AddressHash *hashAddress); /* Get address hash of specific string. */
     static AddressHash getAddressHash(UniqueHash *hashUnique); /* Get address hash by unique hash. */
