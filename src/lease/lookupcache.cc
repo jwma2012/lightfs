@@ -1,8 +1,10 @@
-#include "lease/lookupcache.h"
-#include "lease/lease.h"
+#include "../lease/lookupcache.h"
+
 #include <assert.h>
 
 namespace leaffs {
+
+using namespace leveldb;
 
 namespace {
 static
@@ -26,12 +28,16 @@ void LookupCache::Release(LeaseEntry* entry) {
 
 LeaseEntry* LookupCache::Get(const Slice& path) {
     Cache::Handle* handle = cache_->Lookup(path);
+    printf("%s\n", "get 1.0");
     if (handle == NULL) {
         return NULL;
     }
     void* value = cache_->Value(handle);
+    printf("%s\n", "get 2.0");
     LeaseEntry* entry = reinterpret_cast<LeaseEntry*>(value);
+    printf("%s\n", "get 3.0");
     assert(entry->handle_ == handle);
+    printf("%s\n", "get 4.0");
     return entry;
 }
 
@@ -46,29 +52,18 @@ LeaseEntry* LookupCache::GetValidCache(const Slice& path) {
     return entry;
 }
 
-LeaseEntry* LookupCache::Get(const Slice& path, MetadataType type) {
-    Cache::Handle* handle = cache_->Lookup(path);
-    if (handle == NULL) {
-        return NULL;
-    }
-    void* value = cache_->Value(handle);
-    LeaseEntry* entry = reinterpret_cast<LeaseEntry*>(value);
-    assert(entry->handle_ == handle);
-    return entry;
-}
-
-LeaseEntry* New(const Slice& path, const DirectoryMeta* dir_meta) {
+LeaseEntry* LookupCache::New(const Slice& path, DirectoryMeta* dir_meta) {
     assert(cache_->Lookup(path) == NULL);
-    LeaseEntry* entry = new LeaseEntry(dir_meta);
+    LeaseEntry* entry = new DirMetaEntry(dir_meta);
     Cache::Handle* handle = cache_->Insert(path, entry, 1, &DeleteLeaseEntry);
     entry->cache_ = this;
     entry->handle_ = handle;
     return entry;
 }
 
-LeaseEntry* New(const Slice& path, const FileMeta* file_meta) {
+LeaseEntry* LookupCache::New(const Slice& path, FileMeta* file_meta) {
     assert(cache_->Lookup(path) == NULL);
-    LeaseEntry* entry = new LeaseEntry(dir_meta);
+    LeaseEntry* entry = new FileMetaEntry(file_meta);
     Cache::Handle* handle = cache_->Insert(path, entry, 1, &DeleteLeaseEntry);
     entry->cache_ = this;
     entry->handle_ = handle;

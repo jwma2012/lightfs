@@ -7,7 +7,7 @@
 #include "nrfs.h"
 #include "RPCClient.hpp"
 #include "storage.hpp"
-#include "leveldb/cache.h"
+#include "../lease/lookupcache.h"
 
 using namespace std;
 using namespace leveldb;

@@ -1,8 +1,10 @@
 #ifndef LEAFFS_COMMON_LOOKUPCACHE_H_
 #define LEAFFS_COMMON_LOOKUPCACHE_H_
 
-#include "util/cache.h"
+#include "lease/lease.h"
+#include "debug.hpp"
 
+using namespace leveldb;
 namespace leaffs {
 
 class LookupCache {
@@ -12,8 +14,9 @@ class LookupCache {
     void Evict(const Slice& path);
     void Release(LeaseEntry* entry);
     LeaseEntry* Get(const Slice& path);
-    LeaseEntry* New(const Slice& path, const DirectoryMeta* dir_meta);
-    LeaseEntry* New(const Slice& path, const FileMeta* file_meta);
+    LeaseEntry* GetValidCache(const Slice& path);
+    LeaseEntry* New(const Slice& path, DirectoryMeta* dir_meta);
+    LeaseEntry* New(const Slice& path, FileMeta* file_meta);
 
     LookupCache(int cap = kCacheSize) { cache_ = NewLRUCache(cap); }
 
