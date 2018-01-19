@@ -77,32 +77,21 @@ static int CreateDirMeta(DirectoryMeta *pDirMeta, int k) {
 }
 
 static int DecodeValue(LeaseEntry* entry) {
-    sleep(1);
-    printf("wwwwwwwwwww");
-    sleep(1);
 
     if (entry->GetMetadataType() == kDir) {
-        sleep(1);
-        printf("123456");
-
         DirectoryMeta *pDirMeta = entry->GetDirMeta();
         for (int i = 0; i < pDirMeta->count; i++) {
             printf("DecodeValue %d %s\n", i, pDirMeta->tuple[i].names);
         }
-
     } else {
-        printf("789012");
-
         FileMeta *pFileMeta = entry->GetFileMeta();
         printf("DecodeValue file size = %ld\n", pFileMeta->size);
         printf("DecodeValue count = %ld\n", pFileMeta->count);
-
     }
-
     return 0;
+}
 
-}
-}
+} //end of namespace leaffs
 
 using namespace leaffs;
 
@@ -113,14 +102,12 @@ int main(int argc, char** argv) {
 
     printf("stage 0\n");
     int k = 0;
-
     while (k < kTotalEntry) {
         if (!(k % kFileNumperDir)) { //dir
             DirectoryMeta* dirMeta = new DirectoryMeta();
             CreateDirMeta(dirMeta, k);
             entry = cache->New(EncodeKey(k), dirMeta);
             cache->Release(entry);
-
             delete dirMeta;
         } else {
             FileMeta* fileMeta = new FileMeta();
@@ -142,9 +129,9 @@ int main(int argc, char** argv) {
             //printf("2.0 k = %d", k);
             sleep(1);
             printf("type = %d,%d\n", entry->GetMetadataType(), kDir);
-            printf("1.0 %s\n", "hit");
+            printf("cache %s\n", "hit");
             DecodeValue(entry);
-            printf("2.0 %s\n", "hit");
+
             cache->Release(entry);
         }
         else

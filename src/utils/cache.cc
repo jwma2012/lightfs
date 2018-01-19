@@ -81,7 +81,7 @@ class HandleTable {
   LRUHandle* Insert(LRUHandle* h) {
     LRUHandle** ptr = FindPointer(h->key(), h->hash);
     LRUHandle* old = *ptr;
-    h->next_hash = (old == NULL ? NULL : old->next_hash);
+    h->next_hash = (old == NULL ? NULL : old->next_hash); //可以得到同一hash值的不同的值构成的一条链表
     //h的next和prev指针没有处理？
     *ptr = h;
     if (old == NULL) {
@@ -277,6 +277,7 @@ void LRUCache::Release(Cache::Handle* handle) {
 }
 
 Cache::Handle* LRUCache::Insert(
+  //insert不保证不重复
     const Slice& key, uint32_t hash, void* value, size_t charge,
     void (*deleter)(const Slice& key, void* value)) {
   MutexLock l(&mutex_);

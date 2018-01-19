@@ -60,8 +60,6 @@ set (CMAKE_CXX_COMPILER ${MPI_CXX_COMPILER})
 
 link_libraries(nrfsc)
 
-#add_executable(ttt ${PROJECT_SOURCE_DIR}/src/test/ttt.cpp)
-
 file(GLOB TEST_SOURCES ${PROJECT_SOURCE_DIR}/src/test/*.cpp)
 foreach (TSTSRC ${TEST_SOURCES})
     get_filename_component(TSTNAME ${TSTSRC} NAME_WE)

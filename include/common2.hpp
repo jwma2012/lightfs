@@ -53,10 +53,11 @@ typedef struct
 
 typedef struct                          /* File meta structure. */
 {
+    bool isDirMeta;
     time_t timeLastModified;        /* Last modified time. */
     uint64_t count;                 /* Count of extents. (not required and might have consistency problem with size) */
     uint64_t size;                  /* Size of extents. */
-    FileMetaTuple tuple[MAX_FILE_EXTENT_COUNT];  //最多分为20块
+    FileMetaTuple tuple[MAX_FILE_EXTENT_COUNT];
 } FileMeta;
 //sizeof(FileMeta) = 344B
 
@@ -68,6 +69,7 @@ typedef struct {
 
 typedef struct                          /* Directory meta structure. */
 {
+    bool isDirMeta;
     uint64_t count;                 /* Count of names. */
     DirectoryMetaTuple tuple[MAX_DIRECTORY_COUNT];
 } DirectoryMeta;
