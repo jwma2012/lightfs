@@ -1,5 +1,5 @@
-#include "lease/lookupcache.h"
-#include "util/common.hpp"
+#include "../lease/lookupcache.h"
+#include "common.hpp"
 
 //#include <string.h>
 #include <vector>

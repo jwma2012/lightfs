@@ -30,8 +30,6 @@ struct nrfsfileattr
 	uint32_t time;
 };
 
-
-
 /** Definitions. **/
 #define MAX_PATH_LENGTH 255             /* Max length of path. */
 

@@ -177,10 +177,11 @@ bool RdmaSocket::CreateResources() {
     /* register the memory buffer */
     Debug::notifyInfo("Register Memory Region");
 
-    //mr = ibv_reg_mr(pd, (void*)mm, mmSize, mrFlags);
-    char *p = NULL;
+    mr = ibv_reg_mr(pd, (void*)mm, mmSize, mrFlags);
+    /*char *p = NULL;
     p = (char *)malloc(10*sizeof(char));
     mr = ibv_reg_mr(pd, (void*)p, 10, mrFlags);
+    */
     if (mr == NULL) {
         Debug::notifyError("Memory registration failed");
         rc = 1;

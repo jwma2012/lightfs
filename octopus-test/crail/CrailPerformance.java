@@ -11,14 +11,18 @@ import com.ibm.crail.CrailBufferedInputStream;
 import com.ibm.crail.CrailBufferedOutputStream;
 import com.ibm.crail.CrailFile;
 import com.ibm.crail.CrailFS;
+import com.ibm.crail.CrailBuffer;
 import com.ibm.crail.CrailInputStream;
-import com.ibm.crail.CrailMultiStream;
 import com.ibm.crail.CrailNode;
 import com.ibm.crail.CrailOutputStream;
+import com.ibm.crail.CrailStorageClass;
 import com.ibm.crail.CrailResult;
 import com.ibm.crail.conf.CrailConfiguration;
 import com.ibm.crail.conf.CrailConstants;
-import com.ibm.crail.utils.GetOpt;
+import com.ibm.crail.CrailNodeType;
+import com.ibm.crail.CrailLocationClass;
+import com.ibm.crail.memory.OffHeapBuffer;
+
 public class CrailPerformance {
 	CrailConfiguration conf;
     CrailFS fs;
@@ -39,20 +43,34 @@ public class CrailPerformance {
         this.iosize = _iosize;
     }
     public void createFile(String path) throws Exception {
+        int storageClass = 0;
+        int locationClass = 0;
     	// System.out.println(path);
-        fs.createFile(path, 0, 0).get().syncDir();
+        fs.create(path, CrailNodeType.DATAFILE, CrailStorageClass.get(storageClass), CrailLocationClass.get(locationClass)).get().syncDir();
     }
     public long writeFile(String path) throws Exception {
-    	
-    	long _capacity = op * iosize;
-    	ByteBuffer buf = null;
-    	buf = ByteBuffer.allocateDirect(iosize);
 
-    	ConcurrentLinkedQueue<ByteBuffer> bufferQueue = new ConcurrentLinkedQueue<ByteBuffer>();
+    	long _capacity = op * iosize;
+    	//ByteBuffer buf = null;
+        CrailBuffer buf = null;
+        int size = iosize;
+    	//buf = ByteBuffer.allocateDirect(iosize);
+        if (size == CrailConstants.BUFFER_SIZE){
+            buf = fs.allocateBuffer();
+        } else if (size < CrailConstants.BUFFER_SIZE){
+            CrailBuffer _buf = fs.allocateBuffer();
+            _buf.clear().limit(size);
+            buf = _buf.slice();
+        } else {
+            buf = OffHeapBuffer.wrap(ByteBuffer.allocateDirect(size));
+        }
+
+    	ConcurrentLinkedQueue<CrailBuffer> bufferQueue = new ConcurrentLinkedQueue<CrailBuffer>();
     	bufferQueue.add(buf);
     	warmup(fs, path, 1, bufferQueue);
-
-    	CrailFile file = fs.createFile(path, 0, 0).get();
+        int storageClass = 0;
+        int locationClass = 0;
+    	CrailFile file = fs.create(path, CrailNodeType.DATAFILE, CrailStorageClass.get(storageClass), CrailLocationClass.get(locationClass)).get().asFile();
     	CrailOutputStream directStream = file.getDirectOutputStream(_capacity);
 
     	long start = System.currentTimeMillis();
@@ -66,15 +84,27 @@ public class CrailPerformance {
     }
     public long readFile(String path) throws Exception {
 
-    	ByteBuffer buf = null;
-    	buf = ByteBuffer.allocateDirect(iosize);
-    	buf.clear();
+    	//ByteBuffer buf = null;
+    	//buf = ByteBuffer.allocateDirect(iosize);
+    	//buf.clear();
+        CrailBuffer buf = null;
+        int size = iosize;
+        if (size == CrailConstants.BUFFER_SIZE){
+            buf = fs.allocateBuffer();
+        } else if (size < CrailConstants.BUFFER_SIZE){
+            CrailBuffer _buf = fs.allocateBuffer();
+            _buf.clear().limit(size);
+            buf = _buf.slice();
+        } else {
+            buf = OffHeapBuffer.wrap(ByteBuffer.allocateDirect(size));
+        }
 
-    	ConcurrentLinkedQueue<ByteBuffer> bufferQueue = new ConcurrentLinkedQueue<ByteBuffer>();
+        buf.clear();
+    	ConcurrentLinkedQueue<CrailBuffer> bufferQueue = new ConcurrentLinkedQueue<CrailBuffer>();
     	bufferQueue.add(buf);
     	warmup(fs, path, 1, bufferQueue);
 
-    	CrailFile file = fs.lookupNode(path).get().asFile();
+    	CrailFile file = fs.lookup(path).get().asFile();
     	CrailInputStream directStream = file.getDirectInputStream(file.getCapacity());
 
     	long start = System.currentTimeMillis();
@@ -87,15 +117,17 @@ public class CrailPerformance {
     	return (end - start);
     }
 
-    private void warmup(CrailFS fs, String filename, int operations, ConcurrentLinkedQueue<ByteBuffer> bufferList) throws Exception {
+    private void warmup(CrailFS fs, String filename, int operations, ConcurrentLinkedQueue<CrailBuffer> bufferList) throws Exception {
     	String warmupFilename = filename + ".warmup";
+        int storageClass = 0;
+        int locationClass = 0;
     	if (operations > 0) {
-    		CrailFile warmupFile = fs.createFile(warmupFilename, 0, 0).get();
-    		CrailBufferedOutputStream warmupStream = warmupFile.getBufferedOutputStream(0, true);
+    		CrailFile warmupFile = fs.create(warmupFilename, CrailNodeType.DATAFILE, CrailStorageClass.get(storageClass), CrailLocationClass.get(locationClass)).get().asFile();
+    		CrailBufferedOutputStream warmupStream = warmupFile.getBufferedOutputStream(0);
     		for (int i = 0; i < operations; i++) {
-    			ByteBuffer buf = bufferList.poll();
+    			CrailBuffer buf = bufferList.poll();
     			buf.clear();
-    			warmupStream.write(buf);
+    			warmupStream.write(buf.getByteBuffer());
     			bufferList.add(buf);
     		}
     		warmupStream.flush();
@@ -121,7 +153,7 @@ public class CrailPerformance {
 
     public void createDir(String path) throws Exception {
     	// System.out.println(path);
-    	fs.makeDirectory(path).get().syncDir();
+    	fs.create(path, CrailNodeType.DIRECTORY, CrailStorageClass.DEFAULT, CrailLocationClass.DEFAULT).get().syncDir();
     }
 
 	public void createMultipleFiles(String path, int depth) throws IOException, Exception {
@@ -151,7 +183,7 @@ public class CrailPerformance {
 	}
 
     public void listFiles(String path) throws Exception {
-    	fs.lookupNode(path).get();
+    	fs.lookup(path).get();
     }
 
 	public void statMultipleDirectories(String path, int depth) throws IOException, Exception {
@@ -170,7 +202,7 @@ public class CrailPerformance {
 	}
 
     public void fileStat(String path) throws Exception {
-    	fs.lookupNode(path).get();
+    	fs.lookup(path).get();
     }
 
     public void statMultipleFiles(String path, int depth) throws IOException, Exception {
@@ -279,7 +311,7 @@ public class CrailPerformance {
     CrailConfiguration conf = new CrailConfiguration();
     CrailFS fs = CrailFS.newInstance(conf);
     CrailPerformance ofs = new CrailPerformance(conf, fs, Integer.parseInt(args[0]), Integer.parseInt(args[1]));
-    ofs.createDir("/warmup" + Integer.toString(myrank));
+    ofs.createDir("/warmup" + Integer.toString(myrank+1));
     /*
     long ret = ofs.writeFile("/writeFile" + Integer.toString(myrank));
     ofs.timeCounter(ret, false);
@@ -289,7 +321,7 @@ public class CrailPerformance {
     */
     long sysDate1, sysDate2, rate;
     String path = new String();
-    
+
     System.out.println("mkdir");
 	path = "";
 	sysDate1 = System.currentTimeMillis();

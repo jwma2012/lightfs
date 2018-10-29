@@ -1,7 +1,7 @@
 #ifndef LEAFFS_COMMON_LOOKUPCACHE_H_
 #define LEAFFS_COMMON_LOOKUPCACHE_H_
 
-#include "lease/lease.h"
+#include "../lease/lease.h"
 #include "debug.hpp"
 
 using namespace leveldb;

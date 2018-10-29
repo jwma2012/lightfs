@@ -53,6 +53,7 @@ typedef enum {                          /* Message enumerator. */
     MESSAGE_RAWREAD,
     MESSAGE_DOCOMMIT,
     MESSAGE_READDIRECTORYMETA,
+    MESSAGE_RENEWLEASE,
     MESSAGE_INVALID
 } Message;
 

@@ -8,6 +8,7 @@
 #include "RPCClient.hpp"
 #include "storage.hpp"
 #include "../lease/lookupcache.h"
+//#include "leasecommon.h"
 
 using namespace std;
 using namespace leveldb;
@@ -16,14 +17,17 @@ uint64_t key;
 atomic<bool> isConnected;
 RPCClient *client;
 uint64_t DmfsDataOffset;
+
+static std::vector<string> inserted_keys;
 static std::vector<string> deleted_keys;
 
-static const int kCacheSize = 256;
-Cache* cache;
+using namespace leaffs;
+LookupCache *cache;
 
 struct  timeval start1, end1;
 uint64_t diff;
 uint64_t WriteTime1 = 0, WriteTime2 = 0, WriteTime3 = 0, WriteTime4 = 0, ReadTime1 = 0, ReadTime2 = 0, ReadTime3 = 0, ReadTime4 = 0;
+
 uint16_t get_node_id_by_path(char* path)
 {
 	UniqueHash hashUnique;
@@ -65,6 +69,7 @@ void correct(const char *old_path, char *new_path)
 }
 
 //这个char *转slice的函数是不必要的，因为slice可以通过char *构造
+/*
 static std::string EncodeKey(char *path) {
   std::string result;
   result.append(path);
@@ -90,12 +95,30 @@ static int DecodeValue(void* v) {
 }
 
 static void Deleter(const Slice& key, void* v) {
-    deleted_keys.push_back(key.data());
-    printf("Delete %s in cache.\n", key.data());
+    deleted_keys.push_back(  .data());
+    printf("Delete %s in cache.\", key.data());
     free(v);
     v = NULL;
 }
+*/
 
+/**
+ *重新获取某文件或文件夹的元数据的租约
+ *获取租约分两步，一是新建一个任务，二是任务的处理。或者不新建任务，每次做扫描，还要时间排序。
+ 在现有的cache设计中，它是无锁并行的，因为它是分片的，不同的槽的entry的访问是并行的。
+ */
+
+int RenewSingleLease(uint16_t node_id, char *path, LeaseState state) {
+//bool sendMessage(uint16_t node_id, void* sendBuffer, long unsigned int sendLength, void* recvBuffer, long unsigned int recvLength)
+    GeneralSendBuffer sendBuffer;
+    GeneralReceiveBuffer receiveBuffer;
+    sendBuffer.message = MESSAGE_RENEWLEASE;
+    strcpy(sendBuffer.path, path);
+}
+
+int RenewAllLease() {
+
+}
 /* Get parent directory.
    Examples:    "/parent/file" -> "/parent" return true
                 "/file"        -> "/" return true
@@ -184,7 +207,7 @@ nrfs nrfsConnect(const char* host, int port, int size)
 	DmfsDataOffset += SERVER_MASSAGE_SIZE * SERVER_MASSAGE_NUM * client->getConfInstance()->getServerCount();
     DmfsDataOffset += METADATA_SIZE;
     printf("FileMetaSize = %ld, DirMetaSize = %ld\n", sizeof(FileMeta), sizeof(DirectoryMeta));
-    cache = NewLRUCache(kCacheSize);
+    cache = new LookupCache();
     usleep(100000);
 	return (nrfs)0;
 }
@@ -214,12 +237,13 @@ int nrfsDisconnect(nrfs fs)
 	// Debug::notifyInfo("ReadTime1 =  %d, ReadTime2  = %d, ReadTime3 = %d, ReadTime4 = %d\n",
 	// 	ReadTime1, ReadTime2, ReadTime3, ReadTime4);
     delete client; //调用client的析构函数
-    delete cache;
+    delete cache;  //删除cache
 	return 0;
 }
 
 int nrfsAddMetaToDirectory(nrfs fs, char* parent, char* name, bool isDirectory)
 {
+    //这是一个修改操作
     Debug::debugTitle("nrfsAddMetaToDirectory");
     int result = 0;
     AddMetaToDirectorySendBuffer bufferAddMetaToDirectorySend; /* Send buffer. */
@@ -408,12 +432,12 @@ int nrfsMknod(nrfs fs, const char* _path)
     FileMeta *pFileMeta;
     pFileMeta = (FileMeta *)malloc(sizeof(FileMeta));
     if (pFileMeta == NULL){
-      printf("1.%s\n", "no free memory");
-      return 1;
+        printf("1.%s\n", "no free memory");
+        return 1;
     }
     memset(pFileMeta, 0, sizeof(FileMeta));
     //new file meta
-    pFileMeta->isDirMeta = false;
+    //pFileMeta->isDirMeta = false;
     pFileMeta->timeLastModified = time(NULL); /* Set last modified time. */
     pFileMeta->count = 0; /* Initialize count of extents as 0. */
     pFileMeta->size = 0;
@@ -834,7 +858,7 @@ int nrfsCreateDirectory(nrfs fs, const char* _path)
           return 1;
         }
         memset(pDirMeta, 0, sizeof(DirectoryMeta));
-        pDirMeta->isDirMeta = true;
+        //pDirMeta->isDirMeta = true;
         pDirMeta->count = 0;
         void *value = reinterpret_cast<void *>(pDirMeta);
         cache->Release(cache->Insert(bufferGeneralSend.path, value, 1, &Deleter));
@@ -870,7 +894,7 @@ int nrfsCreateDirectory(nrfs fs, const char* _path)
       return;
     }
     memset(pDirMeta, 0, sizeof(DirectoryMeta));
-    pDirMeta->isDirMeta = true;
+    //pDirMeta->isDirMeta = true;
     pDirMeta->count = 0;
     void *value = reinterpret_cast<void *>(pDirMeta);
     cache->Release(cache->Insert(bufferGeneralSend.path, value, 1,

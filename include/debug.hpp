@@ -4,7 +4,7 @@
 /** Redundance check. **/
 #ifndef DEBUG_HEADER
 #define DEBUG_HEADER
-
+#include <stdint.h>
 /** Included files. **/
 #include <stdio.h>                      /* Standard I/O operations. E.g. vprintf() */
 #include <stdarg.h>                     /* Standard argument operations. E.g. va_list */
@@ -50,6 +50,7 @@ public:
     static void notifyError(const char *format, ...); /* Print error information. */
     static void startTimer(const char*); /* Start timer and display information. */
     static void endTimer(const char*); /* End timer and display information. */
+    static uint64_t NowMicros(); /* get microsecs */
 };
 
 /** Redundance check. **/

@@ -5,28 +5,12 @@
 #include "leveldb/cache.h"
 #include "debug.hpp"
 #include "common.hpp"
+#include "leasecommon.h"
 #include <iostream>
 
 #define MAX_NODE 24
 
 namespace leaffs {
-
-namespace {
-enum LeaseState {
-    kFree,
-    kRead,
-    kWrite,
-};
-
-enum MetadataType {
-    kDir,
-    kFile,
-};
-
-static const uint64_t kEpsilon = 1 * 1000; //1ms
-static const uint64_t kLeaseTime = 1000 * 1000; //1秒钟
-
-} //anonymous namespace
 
 using namespace std;
 using namespace leveldb;
