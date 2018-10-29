@@ -1,39 +1,20 @@
-# octopus
+# lightfs
+It refers to a distributed file system, which aims to achieve high performance and fault-tolerance.
 
+It is based on Octopus， which is developed by Storage Research Group @ Tsinghua Universty.(source code: https://github.com/thustorage/octopus)
 
-Octopus: an RDMA-enabled distributed persistent memory file system
 =========
-
-Please read the following paper for more details:
-Youyou Lu, Jiwu Shu, Youmin Chen. "Octopus: an RDMA-enabled distributed
-persistent memory file system", in USENIX Annual Technical Conference
-(USENIX ATC'17), 2017
-
-
-WARNING: The code can only used for academic research. 
-
 
 Installation:
 
-- OS: Fedora
-- Dependencies: fuse-devel,
-  cryptopp-devel，boost-devel，mpicxx，g++（4.9 and
-higher），libibverbs，java
+- OS: ubuntu
+- Dependencies: fuse-devel,g++（4.9 and
+higher），libibverbs
 
-Build Octopus:
+Build lightfs:
 - create a new folder "build"
 - run "cmake .. & make -j"
- * dmfs: octopus server
- * mpibw: data I/O test
- * mpitest: metadata
-
-Octopus support two modes: fuse and library:
-- Library: refer to the usage of src/client/nrfs.h and mpibw/mpitest
-- FUSE (fusenrfs): octopus client over fuse
-	-- run "./fusenrfs -f -o direct_io  /mnt/dmfs"
+ * lightfs: server
 
 Configuration:
 conf.xml: configuration of the cluster
-
-
-Storage Research Group @ Tsinghua Universty
