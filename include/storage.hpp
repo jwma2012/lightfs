@@ -32,7 +32,7 @@ public:
     uint64_t sizeBufferUsed;            /* Size of used bytes in buffer. */
     HashTable *hashtable;               /* Hash table. */
     Table<FileMeta> *tableFileMeta;     /* File meta table. */
-    <DirectoryMeta> *tableDirectoryMeta; /* Directory meta table. */
+    Table<DirectoryMeta> *tableDirectoryMeta; /* Directory meta table. */
     Table<Block> *tableBlock;           /* Block table. */
     NodeHash getNodeHash(UniqueHash *hashUnique); /* Get node hash by unique hash. */
     //NodeHash getNodeHash(const char *buffer); /* Get node hash. */
