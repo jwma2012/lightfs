@@ -17,7 +17,8 @@
 #include "debug.hpp"                    /* Debug class. */
 // #include "sha256.h"                     /* SHA-256 algorithm. */
 #include "table.hpp"                    /* Table template. Use FreeBit structure. */
-#include <cryptopp/sha.h>                        /* SHA-256 algorithm in Crypto++ library. */
+//#include <cryptopp/sha.h>                        /* SHA-256 algorithm in Crypto++ library. */
+#include "hash.h"
 
 /** Name space. **/
 using namespace CryptoPP;

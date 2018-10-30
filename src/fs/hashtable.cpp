@@ -8,22 +8,24 @@
 #include "hashtable.hpp"
 /** Global variable. **/
 // SHA256 sha256;                          /* FIXME: Is SHA256 class thread-safe? */
-
+const int kSeed = 0xbc9f1d34;
 /* Get address hash of specific string. No check of parameter here.
    @param   buf         Buffer of original data.
    @param   len         Length of buffer.
    @param   hashAddress Buffer of address hash. */
 void HashTable::getAddressHash(const char *buf, uint64_t len, AddressHash *hashAddress)
 {
-    uint64_t sha256_buf[4];
-    // SHA256 sha256;
-    SHA256 sha256; //来自cryptopp库的sha256算法
-    sha256.CalculateDigest((byte *)sha256_buf, (const byte *)buf, len);
+    //uint64_t sha256_buf[4];
+
+    //sha256.CalculateDigest((byte *)sha256_buf, (const byte *)buf, len);
+    uint32_t hash_val = Hash(buf, len, kSeed);
+
     // SHA256_CTX ctx;                     /* Context. */
     // sha256_init(&ctx);                  /* Initialize SHA-256 context. */
     // sha256_update(&ctx, (const BYTE *)buf, len); /* Update SHA-256 context. */
     // sha256_final(&ctx, (BYTE *)sha256_buf); /* Finalize SHA-256 context. */
-    *hashAddress = sha256_buf[0] & 0x00000000000FFFFF; /* Address hash. Get 20 bits. */
+    //*hashAddress = sha256_buf[0] & 0x00000000000FFFFF; /* Address hash. Get 20 bits. */
+    *hashAddress = hash_val & 0x00000000000FFFFF;
 }
 
 /* Get address hash of specific string by unique hash.
