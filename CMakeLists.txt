@@ -12,9 +12,6 @@ endif()
 
 # Find 3rd party libs
 list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
-find_package(Crypto REQUIRED)
-include_directories(${CRYPTO_INCLUDE_DIR})
-#message("-------: ${CRYPTO_INCLUDE_DIR}")
 set(THREADS_PREFER_PTHREAD_FLAG ON)
 find_package(Threads REQUIRED)
 
@@ -35,10 +32,10 @@ add_executable(dmfs ${SERVER_SRC})
 target_link_libraries(dmfs Threads::Threads)
 
 # Build client library
-find_package(JNI)
-include_directories(${JNI_INCLUDE_DIRS})
+#find_package(JNI)
+#include_directories(${JNI_INCLUDE_DIRS})
 #link_libraries(${JNI_LIBRARIES})
-message("===== ${JNI_INCLUDE_DIRS} =====lib:${JNI_LIBRARIES}")
+#message("===== ${JNI_INCLUDE_DIRS} =====lib:${JNI_LIBRARIES}")
 set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -L/usr/local/lib/libfuse.so")
 set(CLIENT_BASE ${PROJECT_SOURCE_DIR}/client)
 set(CNET_SRC ${PROJECT_SOURCE_DIR}/src/net)
