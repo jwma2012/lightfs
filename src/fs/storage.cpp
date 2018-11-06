@@ -52,7 +52,7 @@ NodeHash Storage::getNodeHash(UniqueHash *hashUnique)
         fprintf(stderr, "Storage::getNodeHash: buffer is null.\n");
         exit(EXIT_FAILURE);             /* Exit due to null unique hash. */
     } else {
-        return ((hashUnique->value[3] % countNode) + 1); /* Return node hash. From 1 to countNode. */
+        return ((*hashUnique % countNode) + 1); /* Return node hash. From 1 to countNode. */
       //路径hash得到一个hash一个
     }
 }

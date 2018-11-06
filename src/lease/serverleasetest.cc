@@ -35,20 +35,6 @@ static std::string EncodeKey(int k) {
   return result;
 }
 
-static int DecodeKey(const Slice& k) {
-  /*
-  int i = 0;
-  int num = 0;
-  int t = k.data()[k.size()-i-1];
-  for (;(t<'9')&&(t>'0');i++) {
-    t = k.data()[k.size()-i-1];
-    num += (t-'0')*(i==0?1:i*10);
-  }
-  return num;
-  */
-  return k.data()[k.size()-1] - '0';//最后一位是数字
-}
-
 static int CreateMetaInfo(int k, MetaInfo* info) {
     info->metadata_type = (k % kFileNumperDir) ? kFile : kDir;
     strcpy(info->name, EncodeKey(k).data());
@@ -61,13 +47,6 @@ static int CreateLeaseInfo(int k, ServerLeaseInfo* info) {
     info->lease_state = (k % kFileNumperDir) ? kWrite : kRead;
     //write的lease太多
     info->lease_due = Debug::NowMicros() + kLeaseTime;
-    return 0;
-}
-
-static int CreateMetaInfo2(int k, MetaInfo* info) {
-    info->metadata_type = (k % kFileNumperDir) ? kFile : kDir;
-    strcpy(info->name, EncodeKey(k).data());
-    info->index = k;
     return 0;
 }
 
@@ -97,7 +76,6 @@ int main(int argc, char** argv) {
         k++;
     }
     k = 0;
-    int re;
     printf("stage 1\n");
     while (k < kTotalEntry) {
         printf("k = %d\n", k);

@@ -37,22 +37,7 @@ static std::string EncodeKey(int k) {
   return result;
 }
 
-static int DecodeKey(const Slice& k) {
-  /*
-  int i = 0;
-  int num = 0;
-  int t = k.data()[k.size()-i-1];
-  for (;(t<'9')&&(t>'0');i++) {
-    t = k.data()[k.size()-i-1];
-    num += (t-'0')*(i==0?1:i*10);
-  }
-  return num;
-  */
-  return k.data()[k.size()-1] - '0';//最后一位是数字
-}
-
 static int CreateFileMeta(FileMeta *pFileMeta, int k) {
-    pFileMeta->isDirMeta = false;
     pFileMeta->count = k;
     pFileMeta->size = k * 1024;
     pFileMeta->tuple[0].hashNode = 0x1234567890;
@@ -62,9 +47,8 @@ static int CreateFileMeta(FileMeta *pFileMeta, int k) {
 }
 
 static int CreateDirMeta(DirectoryMeta *pDirMeta, int k) {
-    pDirMeta->isDirMeta = true;
     pDirMeta->count = 5;
-    for (int i = 0; i < pDirMeta->count; i++) {
+    for (uint32_t i = 0; i < pDirMeta->count; i++) {
         if (k+1+i < kTotalEntry) {
             strcpy(pDirMeta->tuple[i].names, EncodeKey(k+1+i).c_str());
             pDirMeta->tuple[i].isDirectories = false;
@@ -80,7 +64,7 @@ static int DecodeValue(LeaseEntry* entry) {
 
     if (entry->GetMetadataType() == kDir) {
         DirectoryMeta *pDirMeta = entry->GetDirMeta();
-        for (int i = 0; i < pDirMeta->count; i++) {
+        for (uint32_t i = 0; i < pDirMeta->count; i++) {
             printf("DecodeValue %d %s\n", i, pDirMeta->tuple[i].names);
         }
     } else {
@@ -119,7 +103,6 @@ int main(int argc, char** argv) {
         k++;
     }
     k = 0;
-    int re;
     printf("stage 1\n");
     while (k < kTotalEntry) {
         printf("k = %d\n", k);

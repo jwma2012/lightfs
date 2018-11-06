@@ -15,6 +15,8 @@ void DeleteLeaseEntry(const Slice& path, void* value) {
 }
 }
 
+//这个没有考虑cache不命中的情况，也就是它的删除假定path对应的是在cache里的。
+//通过阅读源码，发现它是有判断的，所以可以在cache不命中的情况下，直接调用它。
 void LookupCache::Evict(const Slice& path) {
     cache_->Erase(path);
 }
@@ -70,4 +72,4 @@ LeaseEntry* LookupCache::New(const Slice& path, FileMeta* file_meta) {
     return entry;
 }
 
-} // namespace indexfs
+} // namespace lightfs

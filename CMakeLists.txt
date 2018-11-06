@@ -25,28 +25,25 @@ link_libraries(${CRYPTO_LIBRARIES} ${CMAKE_DL_LIBS})
 set(FS_SRC ${PROJECT_SOURCE_DIR}/src/fs)
 set(NET_SRC ${PROJECT_SOURCE_DIR}/src/net)
 set(TOOLS_SRC ${PROJECT_SOURCE_DIR}/src/tools)
+set(UTILS_SRC ${PROJECT_SOURCE_DIR}/src/utils)
+set(LEASE_SRC ${PROJECT_SOURCE_DIR}/src/lease)
 
 # Build server
-file(GLOB_RECURSE SERVER_SRC ${FS_SRC}/*.cpp ${FS_SRC}/*.c ${NET_SRC}/*.cpp ${TOOLS_SRC}/*.cpp)
+file(GLOB_RECURSE SERVER_SRC ${FS_SRC}/*.cpp ${FS_SRC}/*.c ${NET_SRC}/*.cpp ${TOOLS_SRC}/*.cpp ${UTILS_SRC}/coding.cc ${UTILS_SRC}/hash.cc)
 add_executable(dmfs ${SERVER_SRC})
-target_link_libraries(dmfs Threads::Threads)
+target_link_libraries(dmfs pthread)
 
 # Build client library
-#find_package(JNI)
-#include_directories(${JNI_INCLUDE_DIRS})
-#link_libraries(${JNI_LIBRARIES})
-#message("===== ${JNI_INCLUDE_DIRS} =====lib:${JNI_LIBRARIES}")
+
 set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -L/usr/local/lib/libfuse.so")
 set(CLIENT_BASE ${PROJECT_SOURCE_DIR}/client)
 set(CNET_SRC ${PROJECT_SOURCE_DIR}/src/net)
 set(CLIB_SRC ${PROJECT_SOURCE_DIR}/src/client)
-set(OCTOPUS_PORT_SRC ${PROJECT_SOURCE_DIR}/src/port)
-set(OCTOPUS_UTILS_SRC ${PROJECT_SOURCE_DIR}/src/utils)
+set(PORT_SRC ${PROJECT_SOURCE_DIR}/src/port)
 
 file(GLOB_RECURSE NRFS_LIB_SRC ${CNET_SRC}/*.cpp ${CLIB_SRC}/*.cpp ${TOOLS_SRC}/*.cpp ${FS_SRC}/*.cpp)
 
-add_library(nrfsc SHARED ${NRFS_LIB_SRC} ${OCTOPUS_PORT_SRC}/port_posix.cc ${OCTOPUS_UTILS_SRC}/cache.cc ${OCTOPUS_UTILS_SRC}/coding.cc ${OCTOPUS_UTILS_SRC}/hash.cc)
-add_library(jninrfs SHARED ${NRFS_LIB_SRC} ${CLIB_SRC}/JavaApiImpl.cpp)
+add_library(nrfsc SHARED ${NRFS_LIB_SRC} ${PORT_SRC}/port_posix.cc ${UTILS_SRC}/cache.cc ${UTILS_SRC}/coding.cc ${UTILS_SRC}/hash.cc ${LEASE_SRC}/lookupcache.cc ${LEASE_SRC}/serverlease.cc)
 
 # Build client test
 find_package(MPI REQUIRED)

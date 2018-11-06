@@ -28,11 +28,15 @@ struct  timeval start1, end1;
 uint64_t diff;
 uint64_t WriteTime1 = 0, WriteTime2 = 0, WriteTime3 = 0, WriteTime4 = 0, ReadTime1 = 0, ReadTime2 = 0, ReadTime3 = 0, ReadTime4 = 0;
 
+
+//原来的返回值有时是以0为正确，-1为错误，有的是以0为正确，1为错误
+//之后会统一改成以0为正确，-1为错误。
+
 uint16_t get_node_id_by_path(char* path)
 {
 	UniqueHash hashUnique;
-	HashTable::getUniqueHash(path, strlen(path), &hashUnique);//算出一个256位的值
-	return ((hashUnique.value[3] % client->getConfInstance()->getServerCount()) + 1);
+	HashTable::getUniqueHash(path, strlen(path), &hashUnique);//算出一个32位的值
+	return ((hashUnique % client->getConfInstance()->getServerCount()) + 1);
 }
 
 bool sendMessage(uint16_t node_id, void* sendBuffer, long unsigned int sendLength,
@@ -110,14 +114,23 @@ static void Deleter(const Slice& key, void* v) {
 
 int RenewSingleLease(uint16_t node_id, char *path, LeaseState state) {
 //bool sendMessage(uint16_t node_id, void* sendBuffer, long unsigned int sendLength, void* recvBuffer, long unsigned int recvLength)
+    /*
     GeneralSendBuffer sendBuffer;
     GeneralReceiveBuffer receiveBuffer;
     sendBuffer.message = MESSAGE_RENEWLEASE;
     strcpy(sendBuffer.path, path);
+    receiveBuffer.result = true;
+    */
+    //需要做的是消息发送，这个与远端的租约的存储模式无关。
+    return 0;
 }
 
-int RenewAllLease() {
+int RenewAllLeases() {
+    return 0;
+}
 
+int EvictAllLeases() {
+    return 0;
 }
 /* Get parent directory.
    Examples:    "/parent/file" -> "/parent" return true
@@ -199,6 +212,8 @@ bool getNameFromPath(const char *path, char *name) { /* Assume path is valid. */
 *@param size shared memory size
 *return client node_id
 **/
+//这个注释和函数的实际意义不符啊
+//连接的服务器的信息需要从配置文件里读取，而不能自己指定，所以这里的参数是无意义的
 nrfs nrfsConnect(const char* host, int port, int size)
 {
 	Debug::debugTitle("nrfsConnect");
@@ -326,6 +341,7 @@ int nrfsRemoveMetaFromDirectory(nrfs fs, char* path, char* name)
 }
 
 //在nrfsCli中没有被调用
+//直接搜索的话，是没有被调用的，猜测是隐藏到了服务端执行。因为服务端有对应的处理流程
 int nrfsMknodWithMeta(nrfs fs, char *path, FileMeta *metaFile)
 {
 	Debug::debugTitle("nrfsMknodWithMeta");
@@ -441,10 +457,12 @@ int nrfsMknod(nrfs fs, const char* _path)
     pFileMeta->timeLastModified = time(NULL); /* Set last modified time. */
     pFileMeta->count = 0; /* Initialize count of extents as 0. */
     pFileMeta->size = 0;
+    /*
     void *value = reinterpret_cast<void *>(pFileMeta);
     cache->Release(cache->Insert(sendBuffer.path, value, 1,
                                    &Deleter));
-
+    */
+    cache->New(sendBuffer.path, pFileMeta); //使用封装后的接口就简洁很多
 	sendMessage(node_id, &sendBuffer, sizeof(GeneralSendBuffer),
 		&receiveBuffer, sizeof(GeneralReceiveBuffer));
 	if(receiveBuffer.result == false) {
@@ -484,6 +502,7 @@ int nrfsGetAttribute(nrfs fs, nrfsFile _file, FileMeta *attr)
     bufferGeneralSend.message = MESSAGE_GETATTR;
 
     correct((char*)_file, bufferGeneralSend.path);
+    /*
     Cache::Handle* handle = cache->Lookup(bufferGeneralSend.path);
     //int r = (handle == NULL) ? -1 : DecodeValue(cache->Value(handle));
     if (handle != NULL) {
@@ -494,12 +513,19 @@ int nrfsGetAttribute(nrfs fs, nrfsFile _file, FileMeta *attr)
         Debug::debugItem("nrfsGetAttribute, in cache, META.size = %d", attr->size);
         return 0;
     }
+    */
+    LeaseEntry *entry = cache->Get(bufferGeneralSend.path);
+    if (entry != NULL) {
+        GREEN_PRINT("Hit\n");
+        if (kFile == entry->GetMetadataType()) {
+            attr = entry->GetFileMeta();
+            Debug::debugItem("nrfsGetAttribute, in cache, META.size = %d", attr->size);
+            return 0;
+        }
+    }
     RED_PRINT("Miss\n");
     uint16_t node_id = get_node_id_by_path(bufferGeneralSend.path);
-
-
     GetAttributeReceiveBuffer bufferGetAttributeReceive;
-
     sendMessage(node_id, &bufferGeneralSend, sizeof(GeneralSendBuffer),
 					&bufferGetAttributeReceive, sizeof(GetAttributeReceiveBuffer));
 
@@ -517,6 +543,7 @@ int nrfsGetAttribute(nrfs fs, nrfsFile _file, FileMeta *attr)
 * @param path The full path to the file.
 * @return Returns 0 on success, -1 on error.
 **/
+//Access与getAttribute的区别在于前者只看是否存在，后者在此基础上要获取属性
 int nrfsAccess(nrfs fs, const char* _path)
 {
 	Debug::debugTitle("nrfsAccess");
@@ -527,12 +554,23 @@ int nrfsAccess(nrfs fs, const char* _path)
 	sendBuffer.message = MESSAGE_ACCESS;
 
 	correct(_path, sendBuffer.path);
+    /*
     Cache::Handle* handle = cache->Lookup(sendBuffer.path);
     //int r = (handle == NULL) ? -1 : DecodeValue(cache->Value(handle));
     if (handle != NULL) {
         GREEN_PRINT("Hit\n");
         cache->Release(handle);
         return 0;
+    }
+    */
+    LeaseEntry *entry = cache->Get(sendBuffer.path);
+    if (entry != NULL) {
+        GREEN_PRINT("Hit\n");
+        if (kFile == entry->GetMetadataType()) {
+            FileMeta *attr = entry->GetFileMeta();
+            Debug::debugItem("nrfsAccess, in cache, META.size = %d", attr->size);
+            return 0;
+        }
     }
 //cache 不命中则继续远程取
     RED_PRINT("Miss\n");
@@ -723,15 +761,22 @@ int nrfsRead(nrfs fs, nrfsFile _file, void* buffer, uint64_t size, uint64_t offs
     bufferExtentReadSend.message = MESSAGE_EXTENTREAD;
 
     correct((char*)_file, bufferExtentReadSend.path);
-    FileMeta attr;
+    //FileMeta attr;
+    FileMeta *pFileMeta;
 
-    Cache::Handle* handle = cache->Lookup(bufferExtentReadSend.path);
-    if (handle != NULL) {
+    //Cache::Handle* handle = cache->Lookup(bufferExtentReadSend.path);
+    LeaseEntry *entry = cache->Get(bufferExtentReadSend.path);
+    if (entry!= NULL) {
         GREEN_PRINT("Hit\n");
+        /*
         attr = *(FileMeta *)(cache->Value(handle));
         cache->Release(handle);
-        Debug::debugItem("nrfsGetAttribute, META.size = %ld", attr.size);
-        fillFilePositionInformation(size, offset, &fpi, &attr);
+        */
+        if (kFile == entry->GetMetadataType()) {
+            pFileMeta = entry->GetFileMeta();
+        }
+        Debug::debugItem("nrfsGetAttribute, META.size = %ld", pFileMeta->size);
+        fillFilePositionInformation(size, offset, &fpi, pFileMeta);
 
         gettimeofday(&start1, NULL);
         for(int i = 0; i < (int)fpi.len; i++)
@@ -860,8 +905,9 @@ int nrfsCreateDirectory(nrfs fs, const char* _path)
         memset(pDirMeta, 0, sizeof(DirectoryMeta));
         //pDirMeta->isDirMeta = true;
         pDirMeta->count = 0;
-        void *value = reinterpret_cast<void *>(pDirMeta);
-        cache->Release(cache->Insert(bufferGeneralSend.path, value, 1, &Deleter));
+        //void *value = reinterpret_cast<void *>(pDirMeta);
+        //cache->Release(cache->Insert(bufferGeneralSend.path, value, 1, &Deleter));
+        cache->New(bufferGeneralSend.path, pDirMeta);
 
 		sendMessage(node_id, &bufferGeneralSend, sizeof(GeneralSendBuffer),
 			&bufferGeneralReceive, sizeof(GeneralReceiveBuffer));
@@ -896,9 +942,9 @@ int nrfsCreateDirectory(nrfs fs, const char* _path)
     memset(pDirMeta, 0, sizeof(DirectoryMeta));
     //pDirMeta->isDirMeta = true;
     pDirMeta->count = 0;
-    void *value = reinterpret_cast<void *>(pDirMeta);
-    cache->Release(cache->Insert(bufferGeneralSend.path, value, 1,
-                                   &Deleter));
+    //void *value = reinterpret_cast<void *>(pDirMeta);
+    //cache->Release(cache->Insert(bufferGeneralSend.path, value, 1, &Deleter));
+    cache->New(bufferGeneralSend.path, pDirMeta);
 
 	sendMessage(node_id, &bufferGeneralSend, sizeof(GeneralSendBuffer),
 		&bufferGeneralReceive, sizeof(GeneralReceiveBuffer));
@@ -928,7 +974,7 @@ int nrfsDelete(nrfs fs, const char* _path)
     GetAttributeReceiveBuffer bufferReceive; /* Receive buffer. */
 
 	correct(_path, bufferGeneralSend.path);
-
+/*
     Cache::Handle* handle = cache->Lookup(bufferGeneralSend.path);
     //int r = (handle == NULL) ? -1 : DecodeValue(cache->Value(handle));
     if (handle != NULL) {
@@ -936,6 +982,13 @@ int nrfsDelete(nrfs fs, const char* _path)
         cache->Release(handle);
         cache->Erase(bufferGeneralSend.path);
     }
+    */
+    LeaseEntry *entry = cache->Get(bufferGeneralSend.path);
+    if (entry != NULL) {
+        GREEN_PRINT("Hit\n");
+        cache->Evict(bufferGeneralSend.path);
+    }
+
     RED_PRINT("Miss\n");
 	uint16_t node_id = get_node_id_by_path(bufferGeneralSend.path);
 
@@ -956,6 +1009,7 @@ int nrfsDelete(nrfs fs, const char* _path)
 	}
 	return result;
 }
+
 int nrfsFreeBlock(uint16_t nodeHash, uint64_t startBlock, uint64_t countBlock)
 {
 	BlockFreeSendBuffer bufferSend;
@@ -971,8 +1025,10 @@ int nrfsFreeBlock(uint16_t nodeHash, uint64_t startBlock, uint64_t countBlock)
 		return 0;
 	}
 }
+
 int renameDirectory(nrfs fs, const char *oldPath, const char *newPath)
 {
+    //递归执行，也就是将下面每个文件的信息都要改一遍，因为是采用了hash的存储模式
 	nrfsfilelist list;
 	FileMeta attr;
 	uint32_t i;
@@ -1026,14 +1082,7 @@ int nrfsRename(nrfs fs, const char* _oldpath, const char* _newpath)
 
 	correct(_oldpath, bufferRenameSend.pathOld);
 	correct(_newpath, bufferRenameSend.pathNew);
-/*
-    Cache::Handle* handle = cache->Lookup(bufferRenameSend.pathOld);
-    //int r = (handle == NULL) ? -1 : DecodeValue(cache->Value(handle));
-    if (handle != NULL) {
-        cache->Release(handle);
-        cache->Erase(bufferRenameSend.pathOld);
-    }
-    */
+
 //这里可以有一个小小的优化，先查再删
 	FileMeta meta;
 	if(nrfsGetAttribute(fs, bufferRenameSend.pathOld, &meta)) {//返回值是-1和0两种
@@ -1041,12 +1090,14 @@ int nrfsRename(nrfs fs, const char* _oldpath, const char* _newpath)
     }
 	else
 	{
+        /*
         Cache::Handle* handle = cache->Lookup(bufferRenameSend.pathOld);
         if (handle != NULL) {
             GREEN_PRINT("Hit\n");
             cache->Release(handle);
             cache->Erase(bufferRenameSend.pathOld);
         }
+        */
         RED_PRINT("Miss\n");
 		if(meta.count == MAX_FILE_EXTENT_COUNT)
 		{
@@ -1056,7 +1107,7 @@ int nrfsRename(nrfs fs, const char* _oldpath, const char* _newpath)
 		/* Rename for a directory is not implemented */
 
         //add cache
-
+        /*
         //int charge = sizeof(FileMeta);
         FileMeta *pFileMeta;
         pFileMeta = (FileMeta *)malloc(sizeof(FileMeta));
@@ -1070,7 +1121,9 @@ int nrfsRename(nrfs fs, const char* _oldpath, const char* _newpath)
         void *value = reinterpret_cast<void *>(pFileMeta);
         cache->Release(cache->Insert(bufferRenameSend.pathNew, value, 1,
                                    &Deleter));
+        */
         //end of add cache
+        //在写入的时候考虑不加入cache
 		if(nrfsMknodWithMeta(fs, bufferRenameSend.pathNew, &meta))
 		{
 			Debug::notifyError("nrfsMknodWithMeta failed.");
@@ -1114,11 +1167,16 @@ int nrfsListDirectory(nrfs fs, const char* _path, nrfsfilelist *list)
 	correct(_path, bufferGeneralSend.path); //进行路径处理,得到dir1/dir2 或者dir1/file1
 
 	uint16_t node_id = get_node_id_by_path(bufferGeneralSend.path);
-    Cache::Handle* handle = cache->Lookup(bufferGeneralSend.path);
-    if (handle != NULL) {
+    //Cache::Handle* handle = cache->Lookup(bufferGeneralSend.path);
+    LeaseEntry* entry = NULL;
+    entry = cache->Get(bufferGeneralSend.path);
+    if (entry != NULL) {
         GREEN_PRINT("Hit\n");
-        cache->Release(handle);
-        *list = *((nrfsfilelist *)(cache->Value(handle)));
+        if (entry->GetMetadataType() == kDir) {
+            DirectoryMeta *pDirMeta = entry->GetDirMeta();
+            //typedef DirectoryMeta nrfsfilelist; 二者是一样的
+            list = pDirMeta;
+        }
         Debug::endTimer("nrfsListDirectory");
         return 0;
     }
@@ -1136,10 +1194,12 @@ int nrfsListDirectory(nrfs fs, const char* _path, nrfsfilelist *list)
     }
     memset(pDirMeta, 0, sizeof(DirectoryMeta));
     *pDirMeta = bufferReadDirectoryReceive.list;
+    /*
     void *value = reinterpret_cast<void *>(pDirMeta);
     cache->Release(cache->Insert(bufferGeneralSend.path, value, 1,
                                    &Deleter));
-
+*/
+    cache->New(bufferGeneralSend.path, pDirMeta);
     Debug::endTimer("nrfsListDirectory");
 	if(bufferReadDirectoryReceive.result)
 		return 0;

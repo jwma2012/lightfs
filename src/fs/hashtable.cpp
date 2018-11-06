@@ -8,7 +8,10 @@
 #include "hashtable.hpp"
 /** Global variable. **/
 // SHA256 sha256;                          /* FIXME: Is SHA256 class thread-safe? */
-const int kSeed = 0xbc9f1d34;
+
+using namespace leveldb;
+
+const uint32_t kSeed = 0xbc9f1d34;
 /* Get address hash of specific string. No check of parameter here.
    @param   buf         Buffer of original data.
    @param   len         Length of buffer.
@@ -33,7 +36,7 @@ void HashTable::getAddressHash(const char *buf, uint64_t len, AddressHash *hashA
    @return              Address hash. */
 AddressHash HashTable::getAddressHash(UniqueHash *hashUnique)
 {
-    return hashUnique->value[0] & 0x00000000000FFFFF; /* Address hash. Get 20 bits. */
+    return *hashUnique & 0x00000000000FFFFF; /* Address hash. Get 20 bits. */
 }
 
 /* Get unique hash of specific string. No check of parameter here.
@@ -43,8 +46,9 @@ AddressHash HashTable::getAddressHash(UniqueHash *hashUnique)
 void HashTable::getUniqueHash(const char *buf, uint64_t len, UniqueHash *hashUnique)
 {
     // SHA256 sha256;
-    SHA256 sha256;
-    sha256.CalculateDigest((byte *)hashUnique, (const byte *)buf, len);
+    //SHA256 sha256;
+    //sha256.CalculateDigest((byte *)hashUnique, (const byte *)buf, len);
+    *hashUnique = Hash(buf, len, kSeed);
     // SHA256_CTX ctx;                     /* Context. */
     // sha256_init(&ctx);                  /* Initialize SHA-256 context. */
     // sha256_update(&ctx, (const BYTE *)buf, len); /* Update SHA-256 context. */

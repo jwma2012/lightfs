@@ -21,7 +21,7 @@
 #include "hash.h"
 
 /** Name space. **/
-using namespace CryptoPP;
+using namespace leveldb;
 
 /** Design. **/
 
@@ -68,10 +68,12 @@ using namespace CryptoPP;
 typedef uint64_t AddressHash;           /* Address hash definition for locate. */
                                         /* 8-byte address is far enough. Acutally 20-bit (2.5-byte) is enough, but an 64-bit variable is better in address computation. */
 
-typedef struct {                        /* Unique hash structure for identify a unique path. There might be collision. */
+//typedef struct {
+/* Unique hash structure for identify a unique path. There might be collision. */
   //char bytes[32];                       /* 32-byte variable can hold all data in SHA-256 format. */
-  uint64_t value[4];
-} UniqueHash;
+  //uint64_t value[4];
+//} UniqueHash;
+typedef uint32_t UniqueHash;
 
 typedef struct {                        /* Hash item structure. Total 16 bytes. Currently container class and type of item are combined together. */
     uint64_t key;                       /* Key for lock. */
