@@ -40,8 +40,9 @@ bool RPCClient::RdmaCall(uint16_t DesNodeID, char *bufferSend, uint64_t lengthSe
 	uint64_t sendBuffer, receiveBuffer, remoteRecvBuffer;
 	uint16_t offset = 0;
 	uint32_t imm = (uint32_t)socket->getNodeID();
-	//struct timeval startt, endd;
-	//unsigned long diff = 0;
+	struct timeval startt, endd;
+	unsigned long diff = 0;
+	unsigned long tempCount = 0;
 	GeneralSendBuffer *send = (GeneralSendBuffer*)bufferSend;
 	lengthReceive -= ContractSendBuffer(send);
 	send->taskID = ID;
@@ -93,9 +94,9 @@ bool RPCClient::RdmaCall(uint16_t DesNodeID, char *bufferSend, uint64_t lengthSe
 		//gettimeofday(&startt,NULL);
 		Debug::startTimer("polling result");
 		while (recv->message != MESSAGE_RESPONSE) {
-			//printf("client...\n");
+			printf("client...\n");
 			//这个相当于在轮询结果
-			/* gettimeofday(&endd,NULL);
+			gettimeofday(&endd,NULL);
 			diff = 1000000 * (endd.tv_sec - startt.tv_sec) + endd.tv_usec - startt.tv_usec;
 			if (diff > 1000000) {
 				Debug::debugItem("Send the Fucking Message Again.");
@@ -105,7 +106,7 @@ bool RPCClient::RdmaCall(uint16_t DesNodeID, char *bufferSend, uint64_t lengthSe
 				socket->_RdmaBatchWrite(DesNodeID, sendBuffer, remoteRecvBuffer, lengthSend, imm, 1);
 				gettimeofday(&startt,NULL);
 				diff = 0;
-			}*/
+			}
 		}
 		Debug::endTimer("polling result");
 		/*

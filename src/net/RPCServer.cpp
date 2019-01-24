@@ -34,6 +34,7 @@ RPCServer::RPCServer(int _cqSize) :cqSize(_cqSize) {
 	//timer->Record("root initialize");
 
 	wk = new thread[cqSize]();
+	Debug::notifyInfo("cqSize=%d", cqSize);
 	for (int i = 0; i < cqSize; i++)
 		wk[i] = thread(&RPCServer::Worker, this, i);
 }
@@ -44,7 +45,11 @@ RPCServer::~RPCServer() {
 		wk[i].detach();
 	}
 	delete mem;
+	/*
+	Debug::notifyInfo("start stoping wk.");
 	delete wk;
+	Debug::notifyInfo("Finish to Stop wk.");
+	*/
 	delete socket;
 	delete tx;
 	Debug::notifyInfo("RPCServer is closed successfully.");
